@@ -144,6 +144,10 @@ class SystemDashboard(ctk.CTk):
             self.show_dashboard()
             
         # Pass self as master/parent
+        import inspect
+        print(f"DEBUG: ShatterApp Class File: {inspect.getfile(ShatterApp)}")
+        print(f"DEBUG: ShatterApp Init Signature: {inspect.signature(ShatterApp.__init__)}")
+        
         self.current_module_app = ShatterApp(self) 
         self.current_module_app.protocol("WM_DELETE_WINDOW", on_close)
         

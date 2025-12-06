@@ -12,10 +12,8 @@ from system.core.config import THEME
 
 # DnD Disabled to prevent Tcl/Tk crash on macOS
 DND_FILES = None
-# try:
-#     from tkinterdnd2 import DND_FILES
-# except ImportError:
-#     DND_FILES = None
+
+print("DEBUG: LOADING MODULES.SHATTER.GUI.APP (Version 3.5 FIX)")
 
 class ShatterApp(ctk.CTkToplevel):
     def __init__(self, master=None):
