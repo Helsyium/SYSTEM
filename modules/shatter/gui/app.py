@@ -61,14 +61,7 @@ class ShatterApp(ctk.CTkToplevel):
         subtitle = ctk.CTkLabel(header_frame, text="|  Military Grade Sharding Engine", font=("Roboto", 14), text_color=THEME["colors"]["text_secondary"])
         subtitle.pack(side="left", padx=10, pady=(5,0))
         
-        # Theme Switch
-        self.switch_theme = ctk.CTkSwitch(header_frame, text="Dark Mode", command=self.toggle_theme, onvalue="Dark", offvalue="Light")
-        self.switch_theme.select() # Default Dark
-        self.switch_theme.pack(side="right")
 
-    def toggle_theme(self):
-        mode = self.switch_theme.get()
-        ctk.set_appearance_mode(mode)
 
     def create_tabs(self):
         self.tab_view = ctk.CTkTabview(self, fg_color="transparent")

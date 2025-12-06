@@ -5,17 +5,8 @@ import sys
 
 from ..core.config import THEME, APP_NAME, MODULES_DIR
 
-# Try Import TkinterDnD (DISABLED FOR STABILITY ON MAC)
-try:
-    # from tkinterdnd2 import TkinterDnD, DND_FILES
-    # DND_AVAILABLE = True
-    raise ImportError("DnD Disabled for Stability")
-except ImportError:
-    # print("TkinterDnD module not found. Drag & Drop disabled.")
-    DND_AVAILABLE = False
-    # Dummy class
-    class TkinterDnD:
-        class DnDWrapper: pass
+# DnD Support Removed
+DND_AVAILABLE = False
 
 try:
     from modules.vault.gui.app import App as VaultApp
@@ -185,8 +176,42 @@ class SystemDashboard(ctk.CTk):
         
     def show_settings(self):
         self.clear_main_frame()
-        lbl = ctk.CTkLabel(self.main_frame, text="Settings - Coming Soon", font=("Roboto", 20))
-        lbl.pack(pady=50)
+        
+        # Header
+        head = ctk.CTkLabel(self.main_frame, text="System Settings", font=("Roboto", 24, "bold"), text_color=THEME["colors"]["text_primary"])
+        head.grid(row=0, column=0, sticky="w", pady=(0, 20))
+        
+        # Settings Container
+        settings_frame = ctk.CTkFrame(self.main_frame, fg_color=THEME["colors"]["bg_card"], corner_radius=10)
+        settings_frame.grid(row=1, column=0, sticky="nsew", padx=0, pady=10)
+        
+        # 1. Appearance Mode
+        lbl_app = ctk.CTkLabel(settings_frame, text="Appearance Mode", font=("Roboto", 16, "bold"), text_color=THEME["colors"]["text_primary"])
+        lbl_app.grid(row=0, column=0, padx=20, pady=20, sticky="w")
+        
+        self.switch_theme = ctk.CTkSwitch(settings_frame, text="Dark Mode", command=self.toggle_global_theme, 
+                                          onvalue="Dark", offvalue="Light",
+                                          progress_color=THEME["colors"]["accent"])
+        # Set current state
+        if ctk.get_appearance_mode() == "Dark":
+            self.switch_theme.select()
+        else:
+            self.switch_theme.deselect()
+            
+        self.switch_theme.grid(row=0, column=1, padx=20, pady=20, sticky="e")
+        
+        # 2. About
+        lbl_about = ctk.CTkLabel(settings_frame, text="About System Hub", font=("Roboto", 16, "bold"), text_color=THEME["colors"]["text_primary"])
+        lbl_about.grid(row=1, column=0, padx=20, pady=20, sticky="w")
+        
+        lbl_ver = ctk.CTkLabel(settings_frame, text=f"Version: {APP_NAME}\nDeveloper: Helsyium", 
+                               font=("Roboto", 12), text_color=THEME["colors"]["text_secondary"], justify="left")
+        lbl_ver.grid(row=1, column=1, padx=20, pady=20, sticky="e")
+
+    def toggle_global_theme(self):
+        mode = self.switch_theme.get()
+        ctk.set_appearance_mode(mode)
+        # This global change affects all Toplevel windows automatically
 
     def clear_main_frame(self):
         for widget in self.main_frame.winfo_children():

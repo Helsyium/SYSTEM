@@ -5,7 +5,7 @@ from tkinter import filedialog, messagebox
 
 from ..core.crypto_manager import CryptoManager
 from ..core.file_utils import FileManager
-from ..utils.config import APP_NAME
+from ..utils.config import APP_NAME, THEME
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")
@@ -107,40 +107,52 @@ class MainFrame(ctk.CTkFrame):
         
         self.grid_columnconfigure(0, weight=1)
         
-        # Başlık
-        self.lbl_head = ctk.CTkLabel(self, text="Klasör İşlemleri", font=("Roboto", 20, "bold"))
-        self.lbl_head.grid(row=0, column=0, pady=20)
+        # Başlık ve Klasör Seçim Alanı
+        self.frame_top = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_top.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
+        
+        self.lbl_head = ctk.CTkLabel(self.frame_top, text="Klasör İşlemleri", font=("Roboto", 20, "bold"), text_color=THEME["colors"]["text_primary"])
+        self.lbl_head.pack(anchor="w")
 
-        # Klasör Seçim Çerçevesi
-        self.frame_select = ctk.CTkFrame(self)
+        # Klasör Seçim Çerçevesi (Modernize)
+        self.frame_select = ctk.CTkFrame(self, fg_color=THEME["colors"]["bg_card"])
         self.frame_select.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
         self.frame_select.grid_columnconfigure(0, weight=1)
 
-        # Label'i textvariable yerine statik text ile başlatıyoruz (Bug fix)
-        self.lbl_folder = ctk.CTkLabel(self.frame_select, text=self.master.selected_folder.get(), wraplength=400)
-        self.lbl_folder.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        # Label'i textvariable yerine statik text ile başlatıyoruz
+        self.lbl_folder = ctk.CTkLabel(self.frame_select, text=self.master.selected_folder.get(), wraplength=450, 
+                                       font=("Roboto", 13), text_color=THEME["colors"]["text_secondary"])
+        self.lbl_folder.grid(row=0, column=0, padx=15, pady=15, sticky="w")
 
-        self.btn_browse = ctk.CTkButton(self.frame_select, text="Klasör Seç", command=self.browse_folder, width=100)
-        self.btn_browse.grid(row=0, column=1, padx=10, pady=10)
+        self.btn_browse = ctk.CTkButton(self.frame_select, text="KLASÖR SEÇ", command=self.browse_folder, width=120,
+                                        fg_color=THEME["colors"]["accent"], text_color="black")
+        self.btn_browse.grid(row=0, column=1, padx=15, pady=15)
 
-        # İşlem Butonları
+        # İşlem Butonları (Büyük ve Modern)
         self.frame_actions = ctk.CTkFrame(self, fg_color="transparent")
-        self.frame_actions.grid(row=2, column=0, pady=20)
+        self.frame_actions.grid(row=2, column=0, pady=30, padx=20, sticky="ew")
+        self.frame_actions.grid_columnconfigure((0,1), weight=1) # Eşit genişlik
 
-        self.btn_encrypt = ctk.CTkButton(self.frame_actions, text="🔒 ŞİFRELE", command=lambda: self.start_process('encrypt'), 
-                                         fg_color="#d32f2f", hover_color="#b71c1c", width=150, height=40)
-        self.btn_encrypt.pack(side="left", padx=10)
+        self.btn_encrypt = ctk.CTkButton(self.frame_actions, text="🔒 ŞİFRELE (KİLİTLE)", command=lambda: self.start_process('encrypt'), 
+                                         fg_color=THEME["colors"]["danger"], hover_color="#b71c1c", 
+                                         height=50, font=("Roboto", 16, "bold"))
+        self.btn_encrypt.grid(row=0, column=0, padx=10, sticky="ew")
 
-        self.btn_decrypt = ctk.CTkButton(self.frame_actions, text="🔓 ŞİFRE ÇÖZ", command=lambda: self.start_process('decrypt'), 
-                                         fg_color="#388e3c", hover_color="#2e7d32", width=150, height=40)
-        self.btn_decrypt.pack(side="left", padx=10)
+        self.btn_decrypt = ctk.CTkButton(self.frame_actions, text="🔓 ŞİFRE ÇÖZ (AÇ)", command=lambda: self.start_process('decrypt'), 
+                                         fg_color=THEME["colors"]["success"], hover_color="#00c853", 
+                                         height=50, font=("Roboto", 16, "bold"))
+        self.btn_decrypt.grid(row=0, column=1, padx=10, sticky="ew")
 
-        # Durum ve Progress
-        self.lbl_status = ctk.CTkLabel(self, textvariable=self.master.status_text, text_color="cyan")
-        self.lbl_status.grid(row=3, column=0, pady=(10, 0))
+        # Durum ve Progress (Daha belirgin)
+        self.frame_status = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_status.grid(row=3, column=0, pady=10, sticky="ew", padx=20)
+        
+        self.lbl_status = ctk.CTkLabel(self.frame_status, textvariable=self.master.status_text, text="Hazır",
+                                       text_color=THEME["colors"]["accent"], font=("Roboto", 14))
+        self.lbl_status.pack(pady=(10, 5))
 
-        self.progressbar = ctk.CTkProgressBar(self, width=400)
-        self.progressbar.grid(row=4, column=0, pady=10)
+        self.progressbar = ctk.CTkProgressBar(self.frame_status, width=400, progress_color=THEME["colors"]["accent"])
+        self.progressbar.pack(pady=10, fill="x")
         self.progressbar.set(0)
 
     def browse_folder(self):
