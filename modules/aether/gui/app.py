@@ -97,7 +97,33 @@ class AetherApp(ctk.CTkFrame):
             "stun:stun.services.mozilla.com"
         ]
         config = RTCConfiguration(iceServers=[RTCIceServer(urls=url) for url in stun_servers])
-        return RTCPeerConnection(configuration=config)
+        pc = RTCPeerConnection(configuration=config)
+        
+        @pc.on("connectionstatechange")
+        def on_connectionstatechange():
+            print(f"[AETHER DEBUG] Connection state: {pc.connectionState}")
+            self.update_status(f"Bağlantı Durumu: {pc.connectionState}")
+
+        @pc.on("iceconnectionstatechange")
+        def on_iceconnectionstatechange():
+            print(f"[AETHER DEBUG] ICE state: {pc.iceConnectionState}")
+            self.update_status(f"ICE Durumu: {pc.iceConnectionState}")
+            
+        return pc
+
+    def update_status(self, text):
+        try:
+            color = "yellow"
+            if "connect" in text.lower():
+                color = THEME["colors"]["success"]
+            elif "fail" in text.lower() or "close" in text.lower():
+                color = THEME["colors"]["danger"]
+            elif "check" in text.lower():
+                color = "orange"
+                
+            self.master.after(0, lambda: self.lbl_status.configure(text=text, text_color=color))
+        except:
+            pass
 
     # --- HOST MODE ---
     def show_host_mode(self):
@@ -105,6 +131,9 @@ class AetherApp(ctk.CTkFrame):
         self.frame_signaling.grid()
         
         # UI Elements for Host
+        self.lbl_status = ctk.CTkLabel(self.frame_signaling, text="Durum: Bekleniyor...", font=("Roboto", 14, "bold"), text_color="yellow")
+        self.lbl_status.pack(pady=(0, 10))
+
         self.lbl_step1 = ctk.CTkLabel(self.frame_signaling, text="ADIM 1: Bu Kodu Kopyala ve Karşı Tarafa Gönder")
         self.lbl_step1.pack(pady=5)
         
@@ -159,6 +188,9 @@ class AetherApp(ctk.CTkFrame):
         self.frame_modes.grid_remove()
         self.frame_signaling.grid()
 
+        self.lbl_status = ctk.CTkLabel(self.frame_signaling, text="Durum: Bekleniyor...", font=("Roboto", 14, "bold"), text_color="yellow")
+        self.lbl_status.pack(pady=(0, 10))
+        
         self.lbl_step1_join = ctk.CTkLabel(self.frame_signaling, text="ADIM 1: Karşı Taraftan Gelen Kodu (Offer) Yapıştır")
         self.lbl_step1_join.pack(pady=5)
 
