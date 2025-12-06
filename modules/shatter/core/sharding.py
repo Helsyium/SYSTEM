@@ -5,6 +5,7 @@ import uuid
 import shutil
 import concurrent.futures
 import time
+import secrets  # CRITICAL FIX for v3.5
 from typing import List, Dict
 from .crypto import ShatterCrypto
 
