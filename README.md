@@ -41,6 +41,17 @@ SHATTER v3.5 is built upon a **Defense-in-Depth** philosophy. It is not just an 
 4.  **Manifest Construction:** A protected JSON manifest is created, containing encrypted chunk keys (wrapped) and metadata. The manifest itself is then encrypted with the Master Key.
 5.  **Secure Wipe:** Original file is overwritten with random data (Cryptographic Erasure concept applied for SSDs).
 
+### 3. 🌩️ AETHER (P2P Mesh Network)
+A decentralized, serverless communication module designed for secure, censorship-resistant connectivity.
+
+- **Technology:** WebRTC (via `aiortc`), DTLS/SRTP Encryption.
+- **Topology:** Peer-to-Peer (Mesh capable in future).
+- **Features:** 
+    - **Serverless Signaling:** Uses a manual "Out-of-Band" signaling mechanism (Copy-Paste Offer/Answer), eliminating the need for a central signaling server and ensuring total privacy.
+    - **NAT Traversal:** Integration with public STUN servers for connectivity behind strict firewalls.
+    - **Cross-Platform:** Seamless communication between macOS and Windows devices.
+    - **Zero-Log:** No metadata retention, no central database. Messages are transient and end-to-end encrypted.
+
 ---
 
 ## 🛠️ Installation
