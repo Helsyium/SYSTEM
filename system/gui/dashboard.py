@@ -20,6 +20,13 @@ except ImportError as e:
     print(f"Shatter modülü yüklenemedi: {e}")
     ShatterApp = None
 
+try:
+    from modules.aether.gui.app import AetherApp
+except ImportError as e:
+    print(f"Aether modülü yüklenemedi: {e}")
+    AetherApp = None
+
+
 # Inherit from DnDWrapper removed for stability
 class SystemDashboard(ctk.CTk):
     def __init__(self):
@@ -174,6 +181,25 @@ class SystemDashboard(ctk.CTk):
         # Evet, nested mainloop tehlikeli.
         # Toplevel olarak açmak daha iyidir.
         
+    def launch_aether(self):
+        if not AetherApp:
+            print("Aether modülü yok.")
+            return
+
+        self.clear_main_frame()
+        # Aether dashboard içinde frame olarak çalışacak (Toplevel yerine)
+        # Çünkü async loop thread yönetimini dashboard içinde tutmak daha güvenli olabilir
+        # Ancak, diğer modüller ayrı pencere açıyor (Toplevel/App).
+        # Tutarlılık için Aether'i de ayrı pencere yapabilirdim ama AetherApp CTkFrame miras alıyor.
+        # Bu yüzden Dashboard'un main_frame'ine gömeceğiz (Integrated View).
+        
+        # Assuming there's no lbl_welcome in this version, skipping that line.
+        
+        self.current_module_app = AetherApp(self.main_frame)
+        self.current_module_app.pack(fill="both", expand=True)
+
+        # Geri dönüş butonu ekleyelim (Opsiyonel, şimdilik dashboard menüsü solda durduğu için gerek yok)
+
     def show_settings(self):
         self.clear_main_frame()
         
