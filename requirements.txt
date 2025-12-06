@@ -1,0 +1,14 @@
+altgraph==0.17.5
+argon2-cffi==25.1.0
+argon2-cffi-bindings==25.1.0
+cffi==2.0.0
+cryptography==41.0.3
+customtkinter==5.2.2
+darkdetect==0.8.0
+macholib==1.16.4
+packaging==25.0
+pycparser==2.23
+pyinstaller==6.17.0
+pyinstaller-hooks-contrib==2025.10
+setuptools==80.9.0
+Pillow

@@ -1,0 +1,34 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+*.log
+*.key
+*.pem
+*.db
+*.sqlite
+*.sql
+secrets.py
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Project Specific
+*.tmp
+*.bak
+*.enc
+*_sharded/
+*.shatter_manifest
+key_file
+tamper_test_out/
+stress_data.bin
+security_test.dat
+build/
+dist/
+*.spec
