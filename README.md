@@ -40,7 +40,7 @@ Encrypts your files and fragments them into thousands of meaningless pieces.
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/Helsyium/SYSTEM.git
+   git clone https://github.com/Helsyium/SYSTEM
    cd SYSTEM
    ```
 
