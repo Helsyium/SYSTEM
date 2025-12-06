@@ -277,6 +277,10 @@ class ShatterManager:
             
         for root, dirs, files in os.walk(directory_path):
             for file in files:
+                # CRITICAL FIX: Ignore macOS resource fork files (._*) and hidden files
+                if file.startswith(".") or file.startswith("._"):
+                    continue
+                    
                 if file.endswith(self.MANIFEST_EXT):
                     manifests.append(os.path.join(root, file))
         

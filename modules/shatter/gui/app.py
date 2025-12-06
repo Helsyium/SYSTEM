@@ -337,6 +337,11 @@ class ShatterApp(ctk.CTkToplevel):
     def select_manifest(self):
         path = filedialog.askopenfilename(filetypes=[("Shatter Manifest", "*.shatter_manifest")])
         if path:
+            # CRITICAL FIX: Ignore macOS resource fork files (._*)
+            if os.path.basename(path).startswith("._"):
+                messagebox.showerror("Hata", "Lütfen '._' ile başlayan dosyayı DEĞİL, gerçek manifest dosyasını seçin.")
+                return
+                
             self.selected_manifests = [path]
             self.update_reassemble_queue_display()
             
