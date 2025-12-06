@@ -7,6 +7,10 @@ ECHO   SYSTEM HUB - LAUNCHER
 ECHO ===================================================
 ECHO.
 
+:: WINDOWS ENCODING FIX (Emoji ve Unicode Hatalarini Onler)
+SET PYTHONIOENCODING=utf-8
+CHCP 65001 >nul
+
 :: 1. Python Bul (python veya py)
 python --version >nul 2>&1
 IF %ERRORLEVEL% EQU 0 (

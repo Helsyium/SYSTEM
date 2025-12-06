@@ -252,11 +252,18 @@ class AetherApp(ctk.CTkFrame):
 
         @channel.on("message")
         def on_message(message):
-            print(f"[AETHER DEBUG] Message received: {message}")
+            print(f"[AETHER DEBUG] Message received RAW: {message!r}")
             try:
+                # Ensure message is string
+                if isinstance(message, bytes):
+                    message = message.decode('utf-8')
+                
+                print(f"[AETHER DEBUG] Processing message: {message}")
                 self.master.after(0, lambda m=message: self.add_chat_message("Partner", m))
             except Exception as e:
                 print(f"[AETHER ERROR] Failed to display message: {e}")
+                import traceback
+                traceback.print_exc()
 
         # Check if already open (Fix for Windows Joiner race condition)
         if channel.readyState == "open":
@@ -274,10 +281,16 @@ class AetherApp(ctk.CTkFrame):
             return
         
         if self.channel and self.channel.readyState == "open":
-            self.channel.send(msg)
-            self.add_chat_message("Me", msg)
-            self.entry_message.delete(0, "end")
+            print(f"[AETHER DEBUG] Sending message: {msg}")
+            try:
+                self.channel.send(msg)
+                self.add_chat_message("Me", msg)
+                self.entry_message.delete(0, "end")
+            except Exception as e:
+                print(f"[AETHER ERROR] Send failed: {e}")
+                self.add_chat_message("System", f"İletim hatası: {e} 🔴")
         else:
+            print(f"[AETHER DEBUG] Send failed. Channel state: {self.channel.readyState if self.channel else 'None'}")
             self.add_chat_message("System", "Bağlantı hazır değil! 🔴")
 
     def add_chat_message(self, sender, msg):
