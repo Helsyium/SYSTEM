@@ -283,7 +283,9 @@ class AetherApp(ctk.CTkFrame):
         if self.channel and self.channel.readyState == "open":
             print(f"[AETHER DEBUG] Sending message: {msg}")
             try:
-                self.channel.send(msg)
+                # CRITICAL FIX: Send on the event loop thread!
+                self.loop.call_soon_threadsafe(self.channel.send, msg)
+                
                 self.add_chat_message("Me", msg)
                 self.entry_message.delete(0, "end")
             except Exception as e:
