@@ -1,0 +1,16 @@
+# Auto-detect text files and perform LF normalization
+* text=auto
+
+# Python code
+*.py text diff=python
+
+# Binary files - CRITICAL for Shatter
+*.shatter_manifest binary
+*.enc binary
+*.part binary
+*.lock binary
+*.db binary
+
+# Vault encrypted files
+*.enc binary
+*.manifest binary

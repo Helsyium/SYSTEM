@@ -413,24 +413,39 @@ class ShatterManager:
         Şifreli manifest dosyasını okur ve (JSON dict, MasterKey) döner.
         v3.0: Master Key'i de dönüyor çünkü Key Unwrap için lazım.
         """
+        print(f"DEBUG: Reading Manifest from {manifest_path}")
         with open(manifest_path, "rb") as mf:
             data = mf.read()
             
+        print(f"DEBUG: Manifest Data Size: {len(data)} bytes")
+            
         if len(data) < 16 + 12:
-            raise ValueError("Manifest dosyası bozuk (çok kısa).")
+            raise ValueError(f"Manifest dosyası bozuk (çok kısa: {len(data)} bytes).")
             
         salt = data[:16]
         nonce = data[16:28]
         ciphertext = data[28:]
         
+        print(f"DEBUG: Salt (Hex): {salt.hex()}")
+        print(f"DEBUG: Nonce (Hex): {nonce.hex()}")
+        
         # Derive Master Key (Argon2id takes time, do it once)
-        master_key = self.crypto.derive_master_key(salt)
+        print("DEBUG: Deriving Master Key...")
+        try:
+            master_key = self.crypto.derive_master_key(salt)
+            print(f"DEBUG: Master Key Derived (Hash Verification only): {hash(master_key)}")
+        except Exception as e:
+            print(f"DEBUG: Key Derivation Failed: {e}")
+            raise e
         
         try:
             # Decrypt Manifest JSON (Context Index 0)
+            print("DEBUG: Attempting ChaCha20 Poly1305 Decryption...")
             json_bytes = self.crypto.decrypt_chunk(nonce, ciphertext, master_key, 0)
+            print("DEBUG: Decryption Successful. Parsing JSON...")
             return json.loads(json_bytes.decode('utf-8')), master_key
         except Exception as e:
             # Ensure key cleanup on error if possible, though local scope handles it mostly.
+            print(f"DEBUG: Decryption FAILED: {e}")
             del master_key 
-            raise ValueError("Manifest şifresi çözülemedi. Parola yanlış veya dosya bozuk.") from e
+            raise ValueError(f"Manifest şifresi çözülemedi. Parola yanlış veya dosya bozuk. (Hata: {e})") from e
