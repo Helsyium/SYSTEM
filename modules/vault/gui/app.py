@@ -116,7 +116,8 @@ class MainFrame(ctk.CTkFrame):
         self.frame_select.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
         self.frame_select.grid_columnconfigure(0, weight=1)
 
-        self.lbl_folder = ctk.CTkLabel(self.frame_select, textvariable=self.master.selected_folder, wraplength=400)
+        # Label'i textvariable yerine statik text ile başlatıyoruz (Bug fix)
+        self.lbl_folder = ctk.CTkLabel(self.frame_select, text=self.master.selected_folder.get(), wraplength=400)
         self.lbl_folder.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
         self.btn_browse = ctk.CTkButton(self.frame_select, text="Klasör Seç", command=self.browse_folder, width=100)
@@ -146,6 +147,8 @@ class MainFrame(ctk.CTkFrame):
         folder = filedialog.askdirectory()
         if folder:
             self.master.selected_folder.set(folder)
+            # Manuel güncelleme (Bug fix)
+            self.lbl_folder.configure(text=folder)
 
     def start_process(self, mode):
         folder = self.master.selected_folder.get()
