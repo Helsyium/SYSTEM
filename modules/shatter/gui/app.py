@@ -161,12 +161,14 @@ class ShatterApp(ctk.CTkToplevel):
         self.queue_display.pack(pady=5)
         self.queue_display.insert("0.0", "Dosya veya Klasör seçilmedi (Sürükleyip bırakabilirsiniz)...\n")
         
+        # Safe DnD Registration
         if DND_FILES:
             try:
+                # Check if root has DnD capability (prevents crash if dashboard init failed)
                 self.queue_display.drop_target_register(DND_FILES)
                 self.queue_display.dnd_bind('<<Drop>>', self.drop_files_shatter)
             except Exception as e:
-                print(f"DnD Init Error: {e}")
+                print(f"Shatter DnD Warning: {e}")
                 
         self.queue_display.configure(state="disabled")
         
@@ -207,7 +209,7 @@ class ShatterApp(ctk.CTkToplevel):
                 self.queue_reassemble.drop_target_register(DND_FILES)
                 self.queue_reassemble.dnd_bind('<<Drop>>', self.drop_files_reassemble)
             except Exception as e:
-                 print(f"DnD Init Error: {e}")
+                 print(f"Reassemble DnD Warning: {e}")
                  
         self.queue_reassemble.configure(state="disabled")
         # ... rest ...
