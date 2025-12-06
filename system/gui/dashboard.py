@@ -35,7 +35,12 @@ class SystemDashboard(ctk.CTk, TkinterDnD.DnDWrapper):
         
         # Initialize DnD if available
         if DND_AVAILABLE:
-             self.TkdndVersion = TkinterDnD._require(self)
+            try:
+                self.TkdndVersion = TkinterDnD._require(self)
+            except Exception as e:
+                print(f"UYARI: Drag & Drop kutuphanesi yuklenemedi (Runtime Error): {e}")
+                # Disable DnD globally if init fails
+                globals()['DND_AVAILABLE'] = False
 
         self.title(APP_NAME)
         self.geometry("1100x700")
