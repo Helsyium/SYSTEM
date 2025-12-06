@@ -265,6 +265,11 @@ class ShatterApp(ctk.CTkToplevel):
                             count += 1
                 except: pass
             elif p.endswith(".shatter_manifest"):
+                # CRITICAL FIX: Ignore macOS resource fork files (._*)
+                if os.path.basename(p).startswith("._"):
+                    print(f"DEBUG: Ignoring macOS resource file: {p}")
+                    continue
+                    
                 if p not in self.selected_manifests:
                     self.selected_manifests.append(p)
                     count += 1
