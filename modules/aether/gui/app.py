@@ -191,6 +191,7 @@ class AetherApp(ctk.CTkFrame):
         
         @self.pc.on("datachannel")
         def on_datachannel(channel):
+            print(f"[AETHER DEBUG] DataChannel event triggered on JOINER! Channel: {channel}")
             self.channel = channel
             self.setup_channel(channel)
 
@@ -206,14 +207,24 @@ class AetherApp(ctk.CTkFrame):
 
     # --- CHAT & CHANNEL LOGIC ---
     def setup_channel(self, channel):
+        print(f"[AETHER DEBUG] setup_channel called for channel: {channel}")
+        
         @channel.on("open")
         def on_open():
-            self.master.after(0, self.enable_chat_ui)
-            self.master.after(0, lambda: self.add_chat_message("SYSTEM", "Bağlantı Kuruldu! 🟢"))
+            print("[AETHER DEBUG] Channel OPEN event triggered!")
+            try:
+                self.master.after(0, self.enable_chat_ui)
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", "Bağlantı Kuruldu! 🟢"))
+            except Exception as e:
+                print(f"[AETHER ERROR] Failed to enable chat UI: {e}")
 
         @channel.on("message")
         def on_message(message):
-            self.master.after(0, lambda: self.add_chat_message("Partner", message))
+            print(f"[AETHER DEBUG] Message received: {message}")
+            try:
+                self.master.after(0, lambda m=message: self.add_chat_message("Partner", m))
+            except Exception as e:
+                print(f"[AETHER ERROR] Failed to display message: {e}")
 
     def enable_chat_ui(self):
         self.frame_signaling.grid_remove()
