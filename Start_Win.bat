@@ -24,13 +24,14 @@ IF %ERRORLEVEL% EQU 0 (
 
 :: 2. Venv ve Kutuphane Kontrolu
 IF NOT EXIST "venv" (
-    ECHO [BILGI] Sanal ortam (venv) olusturuluyor...
+    ECHO [BILGI] Kurulum yapiliyor...
     %PY_CMD% -m venv venv
+    
     ECHO [BILGI] PIP Guncelleniyor...
     venv\Scripts\python.exe -m pip install --upgrade pip
 )
 
-:: Her baslangicta kutuphaneleri kontrol et/guncelle
+:: HER ACILISTA GUNCELLE (Kritik)
 ECHO [BILGI] Kutuphaneler kontrol ediliyor...
 venv\Scripts\python.exe -m pip install -r requirements.txt
 
