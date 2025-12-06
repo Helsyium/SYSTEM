@@ -100,6 +100,3 @@ This software is provided "AS IS", without warranty of any kind. While it implem
 
 ## 📜 License
 MIT License © 2025 Hellsyium (System Hub)
-
----
-*Designed & Hardened by Antigravity*
