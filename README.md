@@ -1,6 +1,6 @@
-# SYSTEM HUB - Secure Digital Vault & File Shredder
+# SYSTEM HUB - Secure Digital Vault & File Sharding Engine
 
-**SYSTEM HUB**, kişisel veri güvenliği için geliştirilmiş modüler bir güvenlik platformtur. **Askeri standartlarda şifreleme** ve **kriptografik dosya imhası** (sharding) teknolojilerini kullanıcı dostu modern bir arayüzle sunar.
+**SYSTEM HUB** is a modular security platform designed for personal data protection. It delivers **military-grade encryption** and **cryptographic file sharding** technologies through a user-friendly, modern interface.
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Security](https://img.shields.io/badge/Security-Hardened%20v3.5-blue)
@@ -9,60 +9,60 @@
 
 ---
 
-## 🚀 Modüller
+## 🚀 Modules
 
-Proje, tek bir çatı altında çalışan iki güçlü modülden oluşur:
+The project consists of two powerful modules under a single roof:
 
 ### 1. 🛡️ VAULT (Folder Locker)
-Klasörlerinizi saniyeler içinde şifreleyerek görünmez hale getirir.
-- **AES-256-GCM** şifreleme.
-- **Scrypt** KDF (Tuş türetme) ile kaba kuvvet koruması.
-- Dosya ve klasör isimlerini şifreleyerek tam gizlilik sağlar.
+Encrypts and hides your folders in seconds.
+- **AES-256-GCM** encryption.
+- **Scrypt** KDF (Key Derivation Function) for brute-force protection.
+- Encrypts filenames and directory structures for complete privacy.
 
 ### 2. 🧩 SHATTER v3.5 (File Sharding Engine)
-Dosyalarınızı şifreleyip binlerce anlamsız parçaya böler.
-- **ChaCha20-Poly1305** (AEAD) şifreleme.
-- **Argon2id** (64MB, 2-Pass) bellek dirençli KDF.
-- **Shard-Level Encryption:** Her parça 32-byte *benzersiz* anahtarla şifrelenir.
-- **Deterministic Nonce Strategy:** `HMAC-SHA256` tabanlı nonce üretimi (%0 Çakışma).
-- **Context-Bound Key Wrapping:** Chunk anahtarları manifest dosyasında çıplak saklanmaz; ana anahtar ve Chunk UUID ile mühürlenir ("Cut-and-Paste" saldırılarına karşı korumalı).
-- **Atomic I/O:** Elektrik kesintisinde veri kaybı yaşanmaz.
+Encrypts your files and fragments them into thousands of meaningless pieces.
+- **ChaCha20-Poly1305** (AEAD) encryption.
+- **Argon2id** (64MB, 2-Pass) memory-hard KDF.
+- **Shard-Level Encryption:** Each fragment is encrypted with a *unique* 32-byte key.
+- **Deterministic Nonce Strategy:** `HMAC-SHA256` based nonce generation (0% Collision).
+- **Context-Bound Key Wrapping:** Chunk keys are never stored raw; they are sealed with the Master Key and Chunk UUID (Protected against "Cut-and-Paste" attacks).
+- **Atomic I/O:** Prevents data corruption during power failures.
 
 ---
 
-## 🛠️ Kurulum (Installation)
+## 🛠️ Installation
 
-### Gereksinimler
+### Requirements
 - Python 3.10+
 - `pip`
 
-### Adımlar
+### Steps
 
-1. **Repoyu Klonlayın:**
+1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/username/system-hub.git
-   cd system-hub
+   git clone https://github.com/Helsyium/SYSTEM.git
+   cd SYSTEM
    ```
 
-2. **Bağımlılıkları Yükleyin:**
+2. **Install Dependencies:**
    ```bash
-   # Sanal ortam oluşturma (Önerilir)
+   # Create Virtual Environment (Recommended)
    python -m venv venv
    source venv/bin/activate  # Mac/Linux
    venv\Scripts\activate     # Windows
 
-   # Paketleri yükleme
+   # Install Packages
    pip install -r requirements.txt
-   # (Opsiyonel) Drag & Drop desteği için:
+   # (Optional) For Drag & Drop support:
    pip install tkinterdnd2
    ```
 
 ---
 
-## 🖥️ Kullanım (Usage)
+## 🖥️ Usage
 
-### Başlatma
-Uygulama hem macOS hem Windows uyumludur.
+### Launching
+The application is compatible with both macOS and Windows.
 
 **macOS:**
 ```bash
@@ -74,47 +74,47 @@ Uygulama hem macOS hem Windows uyumludur.
 Start_Win.bat
 ```
 
-veya terminalden:
+Or via terminal:
 ```bash
 python run.py
 ```
 
-### SHATTER Kullanımı
-1. **Dosya Seç:** Parçalamak istediğiniz dosya veya klasörleri sürükleyip bırakın.
-2. **Şifre Belirle:** Güçlü bir şifre girin.
-3. **Parçala:** "HEPSİNİ PARÇALA" butonuna basın.
-   - Sonuç: Orijinal dosya silinir (Secure Wipe seçilirse), yerine okunamaz `.enc` parçaları ve bir `.shatter_manifest` dosyası oluşturulur.
-4. **Birleştirme:** `.shatter_manifest` dosyasını seçip şifrenizi girerek dosyayı orijinal haline döndürebilirsiniz.
+### SHATTER Usage
+1. **Select File:** Drag and drop the file or folder you want to shatter.
+2. **Set Password:** Enter a strong password.
+3. **Shatter:** Click "SHATTER ALL".
+   - Result: The original file is securely deleted (if requested), replaced by unreadable `.enc` shards and a `.shatter_manifest` file.
+4. **Reassemble:** Select the `.shatter_manifest` file and enter your password to restore the original file.
 
 ---
 
-## 🔒 Güvenlik Notları (Security Specs)
+## 🔒 Security Specs
 
-Bu proje "Surface Level" bir şifreleme aracı değildir. Aşağıdaki güvenlik standartlarını uygular:
+This project is not a "Surface Level" encryption tool. It implements the following security standards:
 
-| Özellik | Teknoloji | Açıklama |
+| Feature | Technology | Description |
 | :--- | :--- | :--- |
-| **Cipher** | ChaCha20-Poly1305 | Modern, yüksek performanslı AEAD şifreleme. |
-| **KDF** | Argon2id v13 | GPU/ASIC saldırılarına dirençli (64MB RAM/Op). |
-| **Randomness** | `secrets.token_bytes` | OS Cryptographic PRNG kullanımı. |
-| **Integrity** | Poly1305 + HMAC | Veri değişikliği (bit-flip) anında tespit edilir. |
-| **Key Wrap** | Context-Bound | Anahtarlar UUID ile mühürlenir, taşınamaz. |
+| **Cipher** | ChaCha20-Poly1305 | Modern, high-performance AEAD encryption. |
+| **KDF** | Argon2id v13 | Resistant to GPU/ASIC attacks (64MB RAM/Op). |
+| **Randomness** | `secrets.token_bytes` | Uses OS Cryptographic PRNG. |
+| **Integrity** | Poly1305 + HMAC | Detects data modification (bit-flip) instantly. |
+| **Key Wrap** | Context-Bound | Keys are sealed with UUIDs, non-transferable. |
 
-> **NOT:** SSD/Flash depolama birimlerinde "Secure Wipe" (Güvenli Silme) işlemi, cihazın "Wear Leveling" teknolojisi nedeniyle fiziksel veriyi %100 silmeyebilir. Ancak SHATTER, dosyayı şifreleyerek parçaladığı ve *Anahtar İmhası (Cryptographic Erasure)* yaptığı için veri güvenliği matematiksel olarak sağlanır.
-
----
-
-## ⚠️ Yasal Uyarı
-
-Bu yazılım "OLDUĞU GİBİ" sunulmuştur. Yazar, bu yazılımın kullanımından doğabilecek veri kaybı veya hasarlardan sorumlu tutulamaz. Kritik verileriniz için her zaman yedek alınız.
+> **NOTE:** On SSD/Flash storage, "Secure Wipe" may not guarantee 100% physical erasure due to Wear Leveling. However, SHATTER ensures data security mathematically via **Cryptographic Erasure** (destroying the keys).
 
 ---
 
-## 📜 Lisans (License)
-Bu proje **MIT Lisansı** ile lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakınız.
+## ⚠️ Disclaimer
+
+This software is provided "AS IS", without warranty of any kind. The author is not responsible for any data loss or damages arising from the use of this software. Always backup critical data.
+
+---
+
+## 📜 License
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 MIT License © 2025 Hellsyium (System Hub)
 
 ---
 
-*Desiged & Hardened by Antigravity*
+*Designed & Hardened by Antigravity*
