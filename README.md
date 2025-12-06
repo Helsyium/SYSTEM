@@ -1,32 +1,45 @@
 # SYSTEM HUB - Secure Digital Vault & File Sharding Engine
 
-**SYSTEM HUB** is a modular security platform designed for personal data protection. It delivers **military-grade encryption** and **cryptographic file sharding** technologies through a user-friendly, modern interface.
+**SYSTEM HUB** is an advanced, modular security platform designed for uncompromising personal data protection. It integrates **military-grade encryption standard (AES-256)** and innovative **cryptographic file sharding** technologies through a modern, responsive interface.
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Security](https://img.shields.io/badge/Security-Hardened%20v3.5-blue)
-![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey)
+![Architecture](https://img.shields.io/badge/Architecture-Modular-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
-## 🚀 Modules
-
-The project consists of two powerful modules under a single roof:
+## 🚀 Core Modules
 
 ### 1. 🛡️ VAULT (Folder Locker)
-Encrypts and hides your folders in seconds.
-- **AES-256-GCM** encryption.
-- **Scrypt** KDF (Key Derivation Function) for brute-force protection.
-- Encrypts filenames and directory structures for complete privacy.
+A high-performance directory encryption module.
+- **Algorithm:** AES-256-GCM (Galois/Counter Mode).
+- **Key Derivation:** Scrypt (N=16384, r=8, p=1).
+- **Features:** Encrypts filenames, directory structures, and file contents. Zero-knowledge architecture.
 
 ### 2. 🧩 SHATTER v3.5 (File Sharding Engine)
-Encrypts your files and fragments them into thousands of meaningless pieces.
-- **ChaCha20-Poly1305** (AEAD) encryption.
-- **Argon2id** (64MB, 2-Pass) memory-hard KDF.
-- **Shard-Level Encryption:** Each fragment is encrypted with a *unique* 32-byte key.
-- **Deterministic Nonce Strategy:** `HMAC-SHA256` based nonce generation (0% Collision).
-- **Context-Bound Key Wrapping:** Chunk keys are never stored raw; they are sealed with the Master Key and Chunk UUID (Protected against "Cut-and-Paste" attacks).
-- **Atomic I/O:** Prevents data corruption during power failures.
+The flagship module of SYSTEM HUB. It implements a unique "Sharding & Encryption" strategy to secure files against advanced forensic analysis and "Cut-and-Paste" attacks.
+
+#### 🔐 Technical Architecture & Security Hardening (v3.5)
+
+SHATTER v3.5 is built upon a **Defense-in-Depth** philosophy. It is not just an encryption tool; it is a data fragmentation system.
+
+| Component | Specification | Rationale |
+| :--- | :--- | :--- |
+| **Cipher** | **ChaCha20-Poly1305** | High-performance AEAD (Authenticated Encryption with Associated Data). Offers superior software performance compared to AES on mobile/legacy CPUs without hardware acceleration. |
+| **KDF (Master)** | **Argon2id** (v13) | Configured with `64MB Memory`, `2 Passes`, `2 Parallelism`. Resistant to GPU/ASIC brute-force attacks. |
+| **Nonce Strategy** | **Deterministic (HMAC-SHA256)** | `Nonce = HMAC-SHA256(Key, ChunkIndex)[:12]`. Eliminated `os.urandom` for nonces to mathematically guarantee **0% collision risk**, vital for the 96-bit nonce space of ChaCha20. |
+| **Key Management** | **Context-Bound Key Wrapping** | Chunk Keys are **never** stored in plaintext. They are wrapped (encrypted) using the Master Key. <br> `Wrap = Encrypt(MasterKey, ChunkKey, AD=ChunkUUID)`. |
+| **Integrity** | **AEAD + Context Binding** | During decryption, the `ChunkUUID` is passed as Associated Data (AD). If a chunk is moved to another manifest (Cut-and-Paste attack), decryption fails instantly. |
+| **Randomness** | **secrets.token_bytes** | Uses the operating system's CSPRNG for all Salt and Key generation (replaced `os.urandom` for strict cryptographic compliance). |
+| **I/O Safety** | **Atomic Write (fsync)** | All chunks and manifests are written to temporary files and renamed only after `fsync` ensures disk persistence. Prevents corruption during power loss. |
+
+#### 🔄 Workflow
+1.  **Fragmentation:** Input file is divided into variable-sized chunks (1MB - 50MB based on total size).
+2.  **Key Gen:** A unique 32-byte key is generated for *each* chunk.
+3.  **Encryption:** Each chunk is encrypted independently using ChaCha20-Poly1305.
+4.  **Manifest Construction:** A protected JSON manifest is created, containing encrypted chunk keys (wrapped) and metadata. The manifest itself is then encrypted with the Master Key.
+5.  **Secure Wipe:** Original file is overwritten with random data (Cryptographic Erasure concept applied for SSDs).
 
 ---
 
@@ -46,14 +59,15 @@ Encrypts your files and fragments them into thousands of meaningless pieces.
 
 2. **Install Dependencies:**
    ```bash
-   # Create Virtual Environment (Recommended)
+   # Create Virtual Environment
    python -m venv venv
-   source venv/bin/activate  # Mac/Linux
+   # Activate
+   source venv/bin/activate  # macOS/Linux
    venv\Scripts\activate     # Windows
 
-   # Install Packages
+   # Install
    pip install -r requirements.txt
-   # (Optional) For Drag & Drop support:
+   # (Optional) For Drag & Drop:
    pip install tkinterdnd2
    ```
 
@@ -61,60 +75,22 @@ Encrypts your files and fragments them into thousands of meaningless pieces.
 
 ## 🖥️ Usage
 
-### Launching
-The application is compatible with both macOS and Windows.
-
 **macOS:**
 ```bash
 ./Start_Mac.command
 ```
-
 **Windows:**
 ```bash
 Start_Win.bat
 ```
 
-Or via terminal:
-```bash
-python run.py
-```
-
-### SHATTER Usage
-1. **Select File:** Drag and drop the file or folder you want to shatter.
-2. **Set Password:** Enter a strong password.
-3. **Shatter:** Click "SHATTER ALL".
-   - Result: The original file is securely deleted (if requested), replaced by unreadable `.enc` shards and a `.shatter_manifest` file.
-4. **Reassemble:** Select the `.shatter_manifest` file and enter your password to restore the original file.
-
----
-
-## 🔒 Security Specs
-
-This project is not a "Surface Level" encryption tool. It implements the following security standards:
-
-| Feature | Technology | Description |
-| :--- | :--- | :--- |
-| **Cipher** | ChaCha20-Poly1305 | Modern, high-performance AEAD encryption. |
-| **KDF** | Argon2id v13 | Resistant to GPU/ASIC attacks (64MB RAM/Op). |
-| **Randomness** | `secrets.token_bytes` | Uses OS Cryptographic PRNG. |
-| **Integrity** | Poly1305 + HMAC | Detects data modification (bit-flip) instantly. |
-| **Key Wrap** | Context-Bound | Keys are sealed with UUIDs, non-transferable. |
-
-> **NOTE:** On SSD/Flash storage, "Secure Wipe" may not guarantee 100% physical erasure due to Wear Leveling. However, SHATTER ensures data security mathematically via **Cryptographic Erasure** (destroying the keys).
-
 ---
 
 ## ⚠️ Disclaimer
-
-This software is provided "AS IS", without warranty of any kind. The author is not responsible for any data loss or damages arising from the use of this software. Always backup critical data.
-
----
+This software is provided "AS IS", without warranty of any kind. While it implements state-of-the-art cryptographic primitives, the author is not responsible for data loss or damages. **Always backup critical data.**
 
 ## 📜 License
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
 MIT License © 2025 Hellsyium (System Hub)
 
 ---
-
 *Designed & Hardened by Antigravity*
