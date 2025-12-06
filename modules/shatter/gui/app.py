@@ -18,9 +18,10 @@ DND_FILES = None
 #     DND_FILES = None
 
 class ShatterApp(ctk.CTkToplevel):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         
+        print("DEBUG: ShatterApp init started")
         try:
             self.title("SHATTER - Secure File Sharding")
             self.geometry("800x650") 
@@ -38,13 +39,16 @@ class ShatterApp(ctk.CTkToplevel):
             self.grid_rowconfigure(1, weight=1)
             
             # Header
+            print("DEBUG: Creating Header")
             self.create_header()
             
             # Main Content
+            print("DEBUG: Creating Tabs")
             self.create_tabs()
             
-            # Force render
-            self.update()
+            # Force render REMOVED (Dangerous)
+            # self.update() 
+            print("DEBUG: ShatterApp init finished")
             
         except Exception as e:
             print(f"CRITICAL ERROR in ShatterApp Init: {e}")

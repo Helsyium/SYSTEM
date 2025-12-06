@@ -143,7 +143,8 @@ class SystemDashboard(ctk.CTk):
             self.deiconify()
             self.show_dashboard()
             
-        self.current_module_app = ShatterApp()
+        # Pass self as master/parent
+        self.current_module_app = ShatterApp(self) 
         self.current_module_app.protocol("WM_DELETE_WINDOW", on_close)
         
         # Toplevel için mainloop çağrılmaz, ana döngüye dahil olur.
