@@ -5,14 +5,15 @@ import sys
 
 from ..core.config import THEME, APP_NAME, MODULES_DIR
 
-# Try Import TkinterDnD
+# Try Import TkinterDnD (DISABLED FOR STABILITY ON MAC)
 try:
-    from tkinterdnd2 import TkinterDnD, DND_FILES
-    DND_AVAILABLE = True
+    # from tkinterdnd2 import TkinterDnD, DND_FILES
+    # DND_AVAILABLE = True
+    raise ImportError("DnD Disabled for Stability")
 except ImportError:
-    print("TkinterDnD module not found. Drag & Drop disabled.")
+    # print("TkinterDnD module not found. Drag & Drop disabled.")
     DND_AVAILABLE = False
-    # Dummy class for safe inheritance if missing
+    # Dummy class
     class TkinterDnD:
         class DnDWrapper: pass
 
@@ -28,8 +29,8 @@ except ImportError as e:
     print(f"Shatter modülü yüklenemedi: {e}")
     ShatterApp = None
 
-# Inherit from DnDWrapper if available to enable global DnD
-class SystemDashboard(ctk.CTk, TkinterDnD.DnDWrapper):
+# Inherit from DnDWrapper removed for stability
+class SystemDashboard(ctk.CTk):
     def __init__(self):
         super().__init__()
         
@@ -39,7 +40,6 @@ class SystemDashboard(ctk.CTk, TkinterDnD.DnDWrapper):
                 self.TkdndVersion = TkinterDnD._require(self)
             except Exception as e:
                 print(f"UYARI: Drag & Drop kutuphanesi yuklenemedi (Runtime Error): {e}")
-                # Disable DnD globally if init fails
                 globals()['DND_AVAILABLE'] = False
 
         self.title(APP_NAME)
