@@ -60,6 +60,12 @@ class ShatterCrypto:
             plaintext = cipher.decrypt(nonce, ciphertext, context)
             return plaintext
         except Exception as e:
+            print(f"DEBUG: Decryption Fail details:")
+            print(f"DEBUG: Index: {chunk_index}")
+            print(f"DEBUG: Nonce ({len(nonce)}): {nonce.hex()}")
+            print(f"DEBUG: Context ({len(context)}): {context.hex()}")
+            print(f"DEBUG: Ciphertext len: {len(ciphertext)}")
+            print(f"DEBUG: Key Hash: {hash(key)}")
             raise ValueError(f"Parça şifresi çözülemedi (Index: {chunk_index}). Bütünlük hatası.") from e
 
     def calculate_hash(self, data: bytes) -> str:
