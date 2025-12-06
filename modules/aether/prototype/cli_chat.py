@@ -118,15 +118,34 @@ if __name__ == "__main__":
     parser.add_argument("role", choices=["host", "joiner"], help="Role: host (creates offer) or joiner (answers)")
     args = parser.parse_args()
 
-    # STUN Server Configuration for NAT Traversal (Cross-Network P2P)
+    # Robust STUN Server Configuration (Redundant List)
+    # This increases the chance of successful NAT Traversal
+    stun_servers = [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+        "stun:stun3.l.google.com:19302",
+        "stun:stun4.l.google.com:19302",
+        "stun:stun.services.mozilla.com"
+    ]
+    
     config = RTCConfiguration(
-        iceServers=[
-            RTCIceServer(urls="stun:stun.l.google.com:19302")
-        ]
+        iceServers=[RTCIceServer(urls=url) for url in stun_servers]
     )
     
     pc = RTCPeerConnection(configuration=config)
-    
+
+    # Monitor Connection States for Robustness
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange():
+        print(f"\n[NETWORK] Connection State: {pc.connectionState}")
+        if pc.connectionState == "failed":
+            print("[NETWORK] Connection failed! This might be due to Symmetric NAT on both sides.")
+
+    @pc.on("iceconnectionstatechange")
+    async def on_iceconnectionstatechange():
+        print(f"[NETWORK] ICE Connection State: {pc.iceConnectionState}")
+
     try:
         asyncio.run(run_chat(pc, args.role))
     except KeyboardInterrupt:
