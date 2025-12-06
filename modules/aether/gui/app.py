@@ -239,7 +239,7 @@ class AetherApp(ctk.CTkFrame):
 
     # --- CHAT & CHANNEL LOGIC ---
     def setup_channel(self, channel):
-        print(f"[AETHER DEBUG] setup_channel called for channel: {channel}")
+        print(f"[AETHER DEBUG] setup_channel called for channel: {channel} | State: {channel.readyState}")
         
         @channel.on("open")
         def on_open():
@@ -257,6 +257,11 @@ class AetherApp(ctk.CTkFrame):
                 self.master.after(0, lambda m=message: self.add_chat_message("Partner", m))
             except Exception as e:
                 print(f"[AETHER ERROR] Failed to display message: {e}")
+
+        # Check if already open (Fix for Windows Joiner race condition)
+        if channel.readyState == "open":
+            print("[AETHER DEBUG] Channel is ALREADY open, triggering handler manually.")
+            on_open()
 
     def enable_chat_ui(self):
         self.frame_signaling.grid_remove()
