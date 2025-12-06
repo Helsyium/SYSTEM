@@ -5,7 +5,8 @@ from tkinter import filedialog, messagebox
 
 from ..core.crypto_manager import CryptoManager
 from ..core.file_utils import FileManager
-from ..utils.config import APP_NAME, THEME
+from ..utils.config import APP_NAME
+from system.core.config import THEME
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")
