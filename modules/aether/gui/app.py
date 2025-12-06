@@ -64,7 +64,8 @@ class AetherApp(ctk.CTkFrame):
         self.btn_host.grid(row=0, column=0, padx=10, sticky="ew")
 
         self.btn_join = ctk.CTkButton(self.frame_modes, text="BAĞLAN (JOIN)", command=self.show_join_mode,
-                                      fg_color=THEME["colors"]["secondary"], height=50, font=("Roboto", 14, "bold"))
+                                      fg_color=THEME["colors"]["bg_card_hover"], border_width=1, border_color=THEME["colors"]["border"],
+                                      height=50, font=("Roboto", 14, "bold"))
         self.btn_join.grid(row=0, column=1, padx=10, sticky="ew")
 
         # --- SIGNALING AREA (Hidden by default) ---
