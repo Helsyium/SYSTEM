@@ -164,7 +164,7 @@ class ShatterApp(ctk.CTkToplevel):
         
         # 4. Action Button (Cool Style)
         self.btn_reassemble = ctk.CTkButton(self.tab_reassemble, text="BİRLEŞTİR VE ÇÖZ", command=self.run_reassemble_batch,
-                                            fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"], 
+                                            fg_color=THEME["colors"]["success"], hover_color="#00c853", 
                                             width=200, height=40, font=("Roboto", 16, "bold"))
         self.btn_reassemble.pack(pady=20)
         
