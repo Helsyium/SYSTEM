@@ -31,11 +31,22 @@ IF NOT EXIST "venv" (
     venv\Scripts\python.exe -m pip install --upgrade pip
 )
 
-:: HER ACILISTA GUNCELLE (Kritik)
+:: 3. Kutuphaneleri Kontrol Et (OTOMATIK DUZELTME ILE)
 ECHO [BILGI] Kutuphaneler kontrol ediliyor...
 venv\Scripts\python.exe -m pip install -r requirements.txt
 
-:: 3. Uygulamayi Baslat (Direkt Venv Python ile)
+IF %ERRORLEVEL% NEQ 0 (
+    ECHO [UYARI] Standart kurulum basarisiz. Ozel cozum uygulaniyor...
+    ECHO [BILGI] AETHER modulu icin ozel kurulum yapiliyor...
+    
+    venv\Scripts\python.exe -m pip install av==13.0.0
+    venv\Scripts\python.exe -m pip install aiortc --no-deps
+    venv\Scripts\python.exe -m pip install aioice google-crc32c pyee pylibsrtp ifaddr dnspython opencv-python pyopenssl
+    
+    ECHO [BILGI] Ozel kurulum tamamlandi.
+)
+
+:: 4. Uygulamayi Baslat (Direkt Venv Python ile)
 ECHO.
 ECHO [BILGI] Uygulama baslatiliyor...
 venv\Scripts\python.exe system/main.py
