@@ -22,8 +22,16 @@ except ImportError as e:
 
 try:
     from modules.aether.gui.app import AetherApp
+    print("DEBUG: AETHER MODULE LOADED SUCCESSFULLY")
 except ImportError as e:
-    print(f"Aether modülü yüklenemedi: {e}")
+    print(f"ERROR: Aether modülü yüklenemedi (Import Hatası): {e}")
+    import traceback
+    traceback.print_exc()
+    AetherApp = None
+except Exception as e:
+    print(f"ERROR: Aether modülü yüklenirken beklenmedik hata: {e}")
+    import traceback
+    traceback.print_exc()
     AetherApp = None
 
 
@@ -70,11 +78,12 @@ class SystemDashboard(ctk.CTk):
         
         # Navigation Buttons
         self.btn_dashboard = self.create_nav_button("Dashboard", "home", row=2, command=self.show_dashboard)
-        self.btn_settings = self.create_nav_button("Settings", "settings", row=3, command=self.show_settings)
+        self.btn_aether = self.create_nav_button("AETHER", "network_wifi", row=3, command=self.launch_aether)
+        self.btn_settings = self.create_nav_button("Settings", "settings", row=4, command=self.show_settings)
         
         # Bottom Status
         self.status_label = ctk.CTkLabel(self.sidebar, text="Sys-Check: OK", font=("Roboto", 12), text_color=THEME["colors"]["success"])
-        self.status_label.grid(row=5, column=0, padx=20, pady=20, sticky="w")
+        self.status_label.grid(row=6, column=0, padx=20, pady=20, sticky="w")
 
     def create_nav_button(self, text, icon_name, row, command):
         btn = ctk.CTkButton(self.sidebar, text=text, command=command,
@@ -108,6 +117,9 @@ class SystemDashboard(ctk.CTk):
         
         # Shatter Module Card
         self.create_module_card("SHATTER", "Military Grade File Shredder", "READY", 1, 1, self.launch_shatter)
+        
+        # Aether Module Card
+        self.create_module_card("AETHER", "P2P Communication Node", "ONLINE", 2, 0, self.launch_aether)
 
     def create_module_card(self, title, subtitle, status, row, col, command):
         card = ctk.CTkFrame(self.main_frame, fg_color=THEME["colors"]["bg_card"], corner_radius=15, border_width=1, border_color=THEME["colors"]["border"])
