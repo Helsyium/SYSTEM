@@ -10,12 +10,8 @@ import platform
 from ..core.sharding import ShatterManager
 from system.core.config import THEME
 
-# DnD Disabled to prevent Tcl/Tk crash on macOS
+# DnD Completely Removed per user request
 DND_FILES = None
-# try:
-#     from tkinterdnd2 import DND_FILES
-# except ImportError:
-#     DND_FILES = None
 
 print("DEBUG: LOADING MODULES.SHATTER.GUI.APP (Version 3.5 CLEAN FIX)")
 
@@ -84,31 +80,7 @@ class ShatterApp(ctk.CTkToplevel):
         self.setup_shatter_tab()
         self.setup_reassemble_tab()
 
-    # Helper to parse DnD data (handles curly braces for paths with spaces)
-    def parse_dropped_files(self, data):
-        if not data: return []
-        if isinstance(data, list): return data
-        
-        files = []
-        current_file = ""
-        in_braces = False
-        
-        for char in data:
-            if char == '{':
-                in_braces = True
-            elif char == '}':
-                in_braces = False
-            elif char == ' ' and not in_braces:
-                if current_file:
-                    files.append(current_file)
-                    current_file = ""
-            else:
-                current_file += char
-                
-        if current_file:
-            files.append(current_file)
-            
-        return files
+
 
     def setup_shatter_tab(self):
         # File Selection Frame
@@ -127,17 +99,8 @@ class ShatterApp(ctk.CTkToplevel):
         # Queue List (Using CTkTextbox as a read-only list since CTkListbox is not standard)
         self.queue_display = ctk.CTkTextbox(self.tab_shatter, height=100, width=500)
         self.queue_display.pack(pady=5)
-        self.queue_display.insert("0.0", "Dosya veya Klasör seçilmedi (Sürükleyip bırakabilirsiniz)...\n")
+        self.queue_display.insert("0.0", "Dosya veya Klasör seçilmedi...\n")
         
-        # Safe DnD Registration
-        if DND_FILES:
-            try:
-                # Check if root has DnD capability (prevents crash if dashboard init failed)
-                self.queue_display.drop_target_register(DND_FILES)
-                self.queue_display.dnd_bind('<<Drop>>', self.drop_files_shatter)
-            except Exception as e:
-                print(f"Shatter DnD Warning: {e}")
-                
         self.queue_display.configure(state="disabled")
         
         self.selected_files = [] # List of paths
@@ -172,71 +135,42 @@ class ShatterApp(ctk.CTkToplevel):
         self.status_shatter = ctk.CTkLabel(self.tab_shatter, text="")
         self.status_shatter.pack()
 
-    def drop_files_shatter(self, event):
-        files = self.parse_dropped_files(event.data)
-        count = 0
-        for p in files:
-            if os.path.isdir(p):
-                # If directory, scan it (similar to select_folder)
-                for root, dirs, f_list in os.walk(p):
-                    if "_sharded" in root: continue
-                    for f in f_list:
-                        if f.startswith(".") or f.endswith(".DS_Store"): continue
-                        full = os.path.join(root, f)
-                        if full not in self.selected_files:
-                            self.selected_files.append(full)
-                            count += 1
-            elif os.path.isfile(p):
-                if p not in self.selected_files:
-                    self.selected_files.append(p)
-                    count += 1
-        
-        if count > 0:
-            self.update_queue_display()
+
 
     def setup_reassemble_tab(self):
-         # ... existing code ...
-         
-        # Queue List
+        # 1. File Selection Buttons (Top, similar to Shatter Tab)
+        self.frame_btns_reassemble = ctk.CTkFrame(self.tab_reassemble, fg_color="transparent")
+        self.frame_btns_reassemble.pack(pady=10, fill="x", padx=10)
+        
+        btn_select_man = ctk.CTkButton(self.frame_btns_reassemble, text="MANIFEST SEÇ (Tek Dosya)", command=self.select_manifest,
+                                       fg_color=THEME["colors"]["accent"], text_color="black")
+        btn_select_man.pack(pady=5, fill="x")
+        
+        btn_select_dir = ctk.CTkButton(self.frame_btns_reassemble, text="KLASÖR SEÇ (Otomatik Tara)", command=self.select_folder_reassemble,
+                                       fg_color=THEME["colors"]["accent"], text_color="black")
+        btn_select_dir.pack(pady=5, fill="x")
+        
+        # 2. Queue List
         self.queue_reassemble = ctk.CTkTextbox(self.tab_reassemble, height=100, width=500)
         self.queue_reassemble.pack(pady=5)
-        self.queue_reassemble.insert("0.0", "Manifest dosyasını buraya sürükleyin...\n")
-        
-        if DND_FILES:
-            try:
-                self.queue_reassemble.drop_target_register(DND_FILES)
-                self.queue_reassemble.dnd_bind('<<Drop>>', self.drop_files_reassemble)
-            except Exception as e:
-                 print(f"Reassemble DnD Warning: {e}")
-                 
+        self.queue_reassemble.insert("0.0", "Manifest dosyasını seçin...\n")
         self.queue_reassemble.configure(state="disabled")
         
         self.selected_manifests = []
         
-        # Password Input
+        # 3. Password Input
         self.entry_pwd_reassemble = ctk.CTkEntry(self.tab_reassemble, placeholder_text="Şifre Girin", show="*")
         self.entry_pwd_reassemble.pack(pady=10)
         
-        # Files Select Buttons
-        frame_btns = ctk.CTkFrame(self.tab_reassemble, fg_color="transparent")
-        frame_btns.pack(pady=5)
-        
-        btn_select_man = ctk.CTkButton(frame_btns, text="MANIFEST SEÇ", command=self.select_manifest,
-                                       fg_color=THEME["colors"]["accent"], text_color="black")
-        btn_select_man.pack(side="left", padx=5)
-        
-        btn_select_dir = ctk.CTkButton(frame_btns, text="KLASÖR TARA", command=self.select_folder_reassemble,
-                                       fg_color=THEME["colors"]["accent"], text_color="black")
-        btn_select_dir.pack(side="left", padx=5)
-        
-        # Action Button
+        # 4. Action Button (Cool Style)
         self.btn_reassemble = ctk.CTkButton(self.tab_reassemble, text="BİRLEŞTİR VE ÇÖZ", command=self.run_reassemble_batch,
-                                            fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"], width=200, height=40)
+                                            fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"], 
+                                            width=200, height=40, font=("Roboto", 16, "bold"))
         self.btn_reassemble.pack(pady=20)
         
         # OPEN FOLDER BUTTON (Initially Hidden)
         self.btn_open_folder_reassemble = ctk.CTkButton(self.tab_reassemble, text="📂 SONUÇ KLASÖRÜNÜ AÇ", command=lambda: self.open_folder(self.last_reassemble_output),
-                                                        fg_color=THEME["colors"]["success"], width=200)
+                                                        fg_color=THEME["colors"]["accent"], width=200)
 
         # Overall Status
         self.lbl_reassemble_status = ctk.CTkLabel(self.tab_reassemble, text="Hazır", font=("Roboto", 14, "bold"))
@@ -250,32 +184,7 @@ class ShatterApp(ctk.CTkToplevel):
         self.status_reassemble = ctk.CTkLabel(self.tab_reassemble, text="")
         self.status_reassemble.pack()
 
-    def drop_files_reassemble(self, event):
-        files = self.parse_dropped_files(event.data)
-        count = 0
-        for p in files:
-            if os.path.isdir(p):
-                # Scan folder for manifests
-                try:
-                    manager = ShatterManager(password="dummy")
-                    manifests = manager.scan_directory_for_manifests(p)
-                    for m in manifests:
-                        if m not in self.selected_manifests:
-                            self.selected_manifests.append(m)
-                            count += 1
-                except: pass
-            elif p.endswith(".shatter_manifest"):
-                # CRITICAL FIX: Ignore macOS resource fork files (._*)
-                if os.path.basename(p).startswith("._"):
-                    print(f"DEBUG: Ignoring macOS resource file: {p}")
-                    continue
-                    
-                if p not in self.selected_manifests:
-                    self.selected_manifests.append(p)
-                    count += 1
-        
-        if count > 0:
-            self.update_reassemble_queue_display()
+
 
     def open_folder(self, path):
         if not path or not os.path.exists(path):
