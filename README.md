@@ -1,6 +1,6 @@
 # SYSTEM HUB - Secure Digital Vault & File Sharding Engine
 
-**SYSTEM HUB** is an advanced, modular security platform designed for uncompromising personal data protection. It integrates **military-grade encryption standard (AES-256)** and innovative **cryptographic file sharding** technologies through a modern, responsive interface.
+**SYSTEM HUB** is an advanced, modular security platform designed for uncompromising personal data protection. It integrates **ChaCha20-Poly1305 (IETF)** encryption and innovative **cryptographic file sharding** technologies through a modern, responsive interface.
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Security](https://img.shields.io/badge/Security-Hardened%20v3.5-blue)
@@ -13,8 +13,8 @@
 
 ### 1. 🛡️ VAULT (Folder Locker)
 A high-performance directory encryption module.
-- **Algorithm:** AES-256-GCM (Galois/Counter Mode).
-- **Key Derivation:** Scrypt (N=16384, r=8, p=1).
+- **Algorithm:** **ChaCha20-Poly1305** (Authenticated Encryption). *Surpasses AES-256 in software performance on mobile/legacy CPUs.*
+- **Key Derivation (KDF):** **Scrypt** (N=16384, r=8, p=1).
 - **Features:** Encrypts filenames, directory structures, and file contents. Zero-knowledge architecture.
 
 ### 2. 🧩 SHATTER v3.5 (File Sharding Engine)
