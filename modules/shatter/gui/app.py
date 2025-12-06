@@ -10,31 +10,49 @@ import platform
 from ..core.sharding import ShatterManager
 from system.core.config import THEME
 
+# DnD Disabled to prevent Tcl/Tk crash on macOS
+DND_FILES = None
+# try:
+#     from tkinterdnd2 import DND_FILES
+# except ImportError:
+#     DND_FILES = None
+
 class ShatterApp(ctk.CTkToplevel):
     def __init__(self):
         super().__init__()
         
-        self.title("SHATTER - Secure File Sharding")
-        self.geometry("800x650") # Increased height for open folder buttons
-        self.resizable(False, False)
-        
-        self.configure(fg_color=THEME["colors"]["bg_main"])
-        
-        self.shatter_manager = None
-        self.is_processing = False
-        self.last_shatter_output = None
-        self.last_reassemble_output = None
-        
-        # Grid Layout
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        
-        # Header
-        self.create_header()
-        
-        # Main Content (Tab View: Shatter vs Reassemble)
-        self.create_tabs()
-        
+        try:
+            self.title("SHATTER - Secure File Sharding")
+            self.geometry("800x650") 
+            self.resizable(False, False)
+            
+            self.configure(fg_color=THEME["colors"]["bg_main"])
+            
+            self.shatter_manager = None
+            self.is_processing = False
+            self.last_shatter_output = None
+            self.last_reassemble_output = None
+            
+            # Grid Layout
+            self.grid_columnconfigure(0, weight=1)
+            self.grid_rowconfigure(1, weight=1)
+            
+            # Header
+            self.create_header()
+            
+            # Main Content
+            self.create_tabs()
+            
+            # Force render
+            self.update()
+            
+        except Exception as e:
+            print(f"CRITICAL ERROR in ShatterApp Init: {e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Kritik Hata", f"Pencere oluşturulurken hata: {e}")
+            self.destroy()
+
     def create_header(self):
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
         header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
