@@ -18,10 +18,10 @@ DND_FILES = None
 #     DND_FILES = None
 
 class ShatterApp(ctk.CTkToplevel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, master=None):
+        super().__init__(master)
         
-        print("DEBUG: ShatterApp init started")
+        print(f"DEBUG: ShatterApp init started with master={master}")
         try:
             self.title("SHATTER - Secure File Sharding")
             self.geometry("800x650") 
