@@ -12,8 +12,12 @@ from system.core.config import THEME
 
 # DnD Disabled to prevent Tcl/Tk crash on macOS
 DND_FILES = None
+# try:
+#     from tkinterdnd2 import DND_FILES
+# except ImportError:
+#     DND_FILES = None
 
-print("DEBUG: LOADING MODULES.SHATTER.GUI.APP (Version 3.5 FIX)")
+print("DEBUG: LOADING MODULES.SHATTER.GUI.APP (Version 3.5 CLEAN FIX)")
 
 class ShatterApp(ctk.CTkToplevel):
     def __init__(self, master=None):
@@ -37,15 +41,11 @@ class ShatterApp(ctk.CTkToplevel):
             self.grid_rowconfigure(1, weight=1)
             
             # Header
-            print("DEBUG: Creating Header")
             self.create_header()
             
-            # Main Content
-            print("DEBUG: Creating Tabs")
+            # Main Content (Tab View: Shatter vs Reassemble)
             self.create_tabs()
             
-            # Force render REMOVED (Dangerous)
-            # self.update() 
             print("DEBUG: ShatterApp init finished")
             
         except Exception as e:
@@ -84,6 +84,32 @@ class ShatterApp(ctk.CTkToplevel):
         self.setup_shatter_tab()
         self.setup_reassemble_tab()
 
+    # Helper to parse DnD data (handles curly braces for paths with spaces)
+    def parse_dropped_files(self, data):
+        if not data: return []
+        if isinstance(data, list): return data
+        
+        files = []
+        current_file = ""
+        in_braces = False
+        
+        for char in data:
+            if char == '{':
+                in_braces = True
+            elif char == '}':
+                in_braces = False
+            elif char == ' ' and not in_braces:
+                if current_file:
+                    files.append(current_file)
+                    current_file = ""
+            else:
+                current_file += char
+                
+        if current_file:
+            files.append(current_file)
+            
+        return files
+
     def setup_shatter_tab(self):
         # File Selection Frame
         self.frame_files = ctk.CTkFrame(self.tab_shatter, fg_color="transparent")
@@ -101,7 +127,17 @@ class ShatterApp(ctk.CTkToplevel):
         # Queue List (Using CTkTextbox as a read-only list since CTkListbox is not standard)
         self.queue_display = ctk.CTkTextbox(self.tab_shatter, height=100, width=500)
         self.queue_display.pack(pady=5)
-        self.queue_display.insert("0.0", "Dosya veya Klasör seçilmedi...\n")
+        self.queue_display.insert("0.0", "Dosya veya Klasör seçilmedi (Sürükleyip bırakabilirsiniz)...\n")
+        
+        # Safe DnD Registration
+        if DND_FILES:
+            try:
+                # Check if root has DnD capability (prevents crash if dashboard init failed)
+                self.queue_display.drop_target_register(DND_FILES)
+                self.queue_display.dnd_bind('<<Drop>>', self.drop_files_shatter)
+            except Exception as e:
+                print(f"Shatter DnD Warning: {e}")
+                
         self.queue_display.configure(state="disabled")
         
         self.selected_files = [] # List of paths
@@ -135,64 +171,6 @@ class ShatterApp(ctk.CTkToplevel):
         
         self.status_shatter = ctk.CTkLabel(self.tab_shatter, text="")
         self.status_shatter.pack()
-
-# ... imports
-try:
-    from tkinterdnd2 import DND_FILES
-except ImportError:
-    DND_FILES = None
-
-class ShatterApp(ctk.CTkToplevel):
-    def __init__(self):
-        super().__init__()
-        # ... existing init ...
-        
-    # Helper to parse DnD data (handles curly braces for paths with spaces)
-    def parse_dropped_files(self, data):
-        if not data: return []
-        if isinstance(data, list): return data
-        
-        files = []
-        current_file = ""
-        in_braces = False
-        
-        for char in data:
-            if char == '{':
-                in_braces = True
-            elif char == '}':
-                in_braces = False
-            elif char == ' ' and not in_braces:
-                if current_file:
-                    files.append(current_file)
-                    current_file = ""
-            else:
-                current_file += char
-                
-        if current_file:
-            files.append(current_file)
-            
-        return files
-
-    def setup_shatter_tab(self):
-        # ... existing code ...
-        
-        # Queue List
-        self.queue_display = ctk.CTkTextbox(self.tab_shatter, height=100, width=500)
-        self.queue_display.pack(pady=5)
-        self.queue_display.insert("0.0", "Dosya veya Klasör seçilmedi (Sürükleyip bırakabilirsiniz)...\n")
-        
-        # Safe DnD Registration
-        if DND_FILES:
-            try:
-                # Check if root has DnD capability (prevents crash if dashboard init failed)
-                self.queue_display.drop_target_register(DND_FILES)
-                self.queue_display.dnd_bind('<<Drop>>', self.drop_files_shatter)
-            except Exception as e:
-                print(f"Shatter DnD Warning: {e}")
-                
-        self.queue_display.configure(state="disabled")
-        
-        # ... rest of setup ...
 
     def drop_files_shatter(self, event):
         files = self.parse_dropped_files(event.data)
@@ -232,7 +210,45 @@ class ShatterApp(ctk.CTkToplevel):
                  print(f"Reassemble DnD Warning: {e}")
                  
         self.queue_reassemble.configure(state="disabled")
-        # ... rest ...
+        
+        self.selected_manifests = []
+        
+        # Password Input
+        self.entry_pwd_reassemble = ctk.CTkEntry(self.tab_reassemble, placeholder_text="Şifre Girin", show="*")
+        self.entry_pwd_reassemble.pack(pady=10)
+        
+        # Files Select Buttons
+        frame_btns = ctk.CTkFrame(self.tab_reassemble, fg_color="transparent")
+        frame_btns.pack(pady=5)
+        
+        btn_select_man = ctk.CTkButton(frame_btns, text="MANIFEST SEÇ", command=self.select_manifest,
+                                       fg_color=THEME["colors"]["accent"], text_color="black")
+        btn_select_man.pack(side="left", padx=5)
+        
+        btn_select_dir = ctk.CTkButton(frame_btns, text="KLASÖR TARA", command=self.select_folder_reassemble,
+                                       fg_color=THEME["colors"]["accent"], text_color="black")
+        btn_select_dir.pack(side="left", padx=5)
+        
+        # Action Button
+        self.btn_reassemble = ctk.CTkButton(self.tab_reassemble, text="BİRLEŞTİR VE ÇÖZ", command=self.run_reassemble_batch,
+                                            fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"], width=200, height=40)
+        self.btn_reassemble.pack(pady=20)
+        
+        # OPEN FOLDER BUTTON (Initially Hidden)
+        self.btn_open_folder_reassemble = ctk.CTkButton(self.tab_reassemble, text="📂 SONUÇ KLASÖRÜNÜ AÇ", command=lambda: self.open_folder(self.last_reassemble_output),
+                                                        fg_color=THEME["colors"]["success"], width=200)
+
+        # Overall Status
+        self.lbl_reassemble_status = ctk.CTkLabel(self.tab_reassemble, text="Hazır", font=("Roboto", 14, "bold"))
+        self.lbl_reassemble_status.pack()
+
+        # Progress
+        self.progress_reassemble = ctk.CTkProgressBar(self.tab_reassemble, width=400)
+        self.progress_reassemble.pack(pady=5)
+        self.progress_reassemble.set(0)
+        
+        self.status_reassemble = ctk.CTkLabel(self.tab_reassemble, text="")
+        self.status_reassemble.pack()
 
     def drop_files_reassemble(self, event):
         files = self.parse_dropped_files(event.data)
@@ -255,28 +271,6 @@ class ShatterApp(ctk.CTkToplevel):
         
         if count > 0:
             self.update_reassemble_queue_display()
-
-        
-        # Action Button
-        self.btn_reassemble = ctk.CTkButton(self.tab_reassemble, text="BİRLEŞTİR VE ÇÖZ", command=self.run_reassemble_batch,
-                                            fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"], width=200, height=40)
-        self.btn_reassemble.pack(pady=20)
-        
-        # OPEN FOLDER BUTTON (Initially Hidden)
-        self.btn_open_folder_reassemble = ctk.CTkButton(self.tab_reassemble, text="📂 SONUÇ KLASÖRÜNÜ AÇ", command=lambda: self.open_folder(self.last_reassemble_output),
-                                                        fg_color=THEME["colors"]["success"], width=200)
-
-        # Overall Status
-        self.lbl_reassemble_status = ctk.CTkLabel(self.tab_reassemble, text="Hazır", font=("Roboto", 14, "bold"))
-        self.lbl_reassemble_status.pack()
-
-        # Progress
-        self.progress_reassemble = ctk.CTkProgressBar(self.tab_reassemble, width=400)
-        self.progress_reassemble.pack(pady=5)
-        self.progress_reassemble.set(0)
-        
-        self.status_reassemble = ctk.CTkLabel(self.tab_reassemble, text="")
-        self.status_reassemble.pack()
 
     def open_folder(self, path):
         if not path or not os.path.exists(path):
@@ -397,7 +391,8 @@ class ShatterApp(ctk.CTkToplevel):
             
             for i, file_path in enumerate(files):
                 filename = os.path.basename(file_path)
-                self.lbl_overall_status.configure(text=f"İşleniyor: {i+1}/{total_files} - {filename}")
+                # self.lbl_overall_status.configure(text=f"İşleniyor: {i+1}/{total_files} - {filename}")
+                # UI update thread-safe wrap if needed, but ctk usually ok
                 
                 def cb(percent, msg):
                     self.progress_shatter.set(percent / 100)
@@ -457,7 +452,7 @@ class ShatterApp(ctk.CTkToplevel):
             
             for i, manifest_path in enumerate(manifests):
                 filename = os.path.basename(manifest_path)
-                self.lbl_reassemble_status.configure(text=f"Birleştiriliyor: {i+1}/{total_files} - {filename}")
+                # self.lbl_reassemble_status.configure(text=f"Birleştiriliyor: {i+1}/{total_files} - {filename}")
                 
                 def cb(percent, msg):
                     self.progress_reassemble.set(percent / 100)
