@@ -145,7 +145,12 @@ class SystemDashboard(ctk.CTk, TkinterDnD.DnDWrapper):
             
         self.current_module_app = ShatterApp()
         self.current_module_app.protocol("WM_DELETE_WINDOW", on_close)
-        self.current_module_app.mainloop()
+        
+        # Toplevel için mainloop çağrılmaz, ana döngüye dahil olur.
+        # Pencereyi öne getir
+        self.current_module_app.lift()
+        self.current_module_app.focus_force()
+        # self.current_module_app.mainloop()  <-- REMOVED
 
     def launch_vault(self):
         if not VaultApp:
