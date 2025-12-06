@@ -1,4 +1,5 @@
-@echo off
+
+bat_content = """@echo off
 TITLE SYSTEM HUB
 CD /D "%~dp0"
 
@@ -24,20 +25,20 @@ IF %ERRORLEVEL% EQU 0 (
 
 :: 2. Venv ve Kutuphane Kontrolu
 IF NOT EXIST "venv" (
-    ECHO [BILGI] Sanal ortam (venv) olusturuluyor...
+    ECHO [BILGI] Kurulum yapiliyor...
     %PY_CMD% -m venv venv
+    
     ECHO [BILGI] PIP Guncelleniyor...
-    venv\Scripts\python.exe -m pip install --upgrade pip
+    venv\\Scripts\\python.exe -m pip install --upgrade pip
+    
+    ECHO [BILGI] Gereksinimler yukleniyor...
+    venv\\Scripts\\python.exe -m pip install -r requirements.txt
 )
-
-:: Her baslangicta kutuphaneleri kontrol et/guncelle
-ECHO [BILGI] Kutuphaneler kontrol ediliyor...
-venv\Scripts\python.exe -m pip install -r requirements.txt
 
 :: 3. Uygulamayi Baslat (Direkt Venv Python ile)
 ECHO.
 ECHO [BILGI] Uygulama baslatiliyor...
-venv\Scripts\python.exe system/main.py
+venv\\Scripts\\python.exe system/main.py
 
 IF %ERRORLEVEL% NEQ 0 (
     ECHO.
@@ -47,3 +48,10 @@ IF %ERRORLEVEL% NEQ 0 (
 ECHO.
 ECHO Kapatmak icin bir tusa basin...
 PAUSE
+"""
+
+with open("Start_Win.bat", "wb") as f:
+    # Force CRLF for Windows compatibility
+    f.write(bat_content.replace("\\n", "\\r\\n").encode("utf-8"))
+
+print("Start_Win.bat has been generated with CRLF line endings.")

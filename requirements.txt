@@ -12,3 +12,8 @@ pyinstaller==6.17.0
 pyinstaller-hooks-contrib==2025.10
 setuptools==80.9.0
 Pillow
+# AETHER P2P Dependencies
+aiortc
+av
+opencv-python
+pyopenssl

@@ -67,8 +67,6 @@ SHATTER v3.5 is built upon a **Defense-in-Depth** philosophy. It is not just an 
 
    # Install
    pip install -r requirements.txt
-   # (Optional) For Drag & Drop:
-   pip install tkinterdnd2
    ```
 
 ---
