@@ -53,14 +53,7 @@ class NetworkDiscovery:
             except:
                 pass
         
-        # Multicast specific setup
-        try:
-            mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton("0.0.0.0")
-            self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-            # Disable loopback to prevent seeing self (optional but good)
-            self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
-        except Exception as e:
-            print(f"[DISCOVERY] Multicast setup warning: {e}")
+        # Multicast will be set up in start() with correct interface
 
         # Threads
         self.thread_broadcast = None
@@ -192,8 +185,8 @@ class NetworkDiscovery:
                 
                 # Send to Directed Broadcast (Address specific subnet)
                 self.sock_broadcast.sendto(data, (broadcast_target, DISCOVERY_PORT))
+                print(f"[DISCOVERY] Sent beacon to {broadcast_target}:{DISCOVERY_PORT}")
                 
-                # Also send to General Broadcast (Fallback)
                 # Also send to General Broadcast (Fallback)
                 self.sock_broadcast.sendto(data, ("255.255.255.255", DISCOVERY_PORT))
                 
@@ -212,6 +205,7 @@ class NetworkDiscovery:
             try:
                 data, addr = self.sock_listen.recvfrom(2048) # Increased buffer for signature
                 sender_ip = addr[0]
+                print(f"[DISCOVERY] Received {len(data)} bytes from {sender_ip}")
                 
                 # Decode
                 try:
