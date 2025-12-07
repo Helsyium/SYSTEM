@@ -109,4 +109,5 @@ Start_Win.bat
 This software is provided "AS IS", without warranty of any kind. While it implements state-of-the-art cryptographic primitives, the author is not responsible for data loss or damages. **Always backup critical data.**
 
 ## 📜 License
-MIT License © 2025 Hellsyium (System Hub)
+GNU General Public License v3.0 (GPLv3) © 2025 Hellsyium (System Hub)
+Permission is hereby granted to use, copy, modify, and distribute this software, ensuring that all derivative works remain free and open-source under the same terms.
