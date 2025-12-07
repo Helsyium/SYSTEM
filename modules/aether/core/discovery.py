@@ -87,8 +87,35 @@ class NetworkDiscovery:
     def start(self):
         self.running = True
         try:
-            # Bind to all interfaces
-            self.sock_listen.bind(("", DISCOVERY_PORT))
+            # FORCE IPv4 Binding (Windows Fix)
+            # Binding to "" can cause issues on dual-stack systems.
+            self.sock_listen.bind(("0.0.0.0", DISCOVERY_PORT))
+            
+            # --- Multicast Setup (Advanced) ---
+            try:
+                # We need to tell the kernel WHICH interface to join the multicast group on.
+                # Just joining on 0.0.0.0 (default) often picks the wrong one (e.g. VirtualBox, VPN).
+                
+                # 1. Get the real Local IP
+                local_ip, _ = self._get_local_ip_and_broadcast()
+                print(f"[DISCOVERY] Binding Multicast to Interface: {local_ip}")
+                
+                # 2. Construct membership request: Multicast Group + Interface IP
+                mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton(local_ip)
+                self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+                
+                # 3. Disable Loopback (don't see myself)
+                self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
+                
+            except Exception as e:
+                print(f"[DISCOVERY] Multicast Join Warning: {e}")
+                # Fallback: Try joining on default interface
+                try:
+                    mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton("0.0.0.0")
+                    self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+                except:
+                    pass
+
         except Exception as e:
             print(f"[DISCOVERY] Bind failed (Port {DISCOVERY_PORT} busy?): {e}")
             return
@@ -102,6 +129,12 @@ class NetworkDiscovery:
 
     def stop(self):
         self.running = False
+        try:
+            # Leave multicast group (cleanup)
+            # Not strictly necessary as OS handles it on close, but good practice
+            pass
+        except:
+            pass
         try:
             self.sock_broadcast.close()
             self.sock_listen.close()
