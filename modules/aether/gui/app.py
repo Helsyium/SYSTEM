@@ -393,8 +393,15 @@ class AetherApp(ctk.CTkFrame):
         offer = await self.pc.createOffer()
         await self.pc.setLocalDescription(offer)
         
-        # Update UI threadsafe
-        offer_json = json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type})
+        # Update UI threadsafe - Inject Identity for Manual Trusted Peer Logic
+        local_ip = self.discovery._get_local_ip_and_broadcast()[0] if hasattr(self, 'discovery') else "0.0.0.0"
+        offer_json = json.dumps({
+            "sdp": self.pc.localDescription.sdp, 
+            "type": self.pc.localDescription.type,
+            "id": self.discovery.device_id,
+            "user": self.discovery.username,
+            "ip": local_ip
+        })
         self.master.after(0, lambda: self.txt_offer.insert("0.0", offer_json))
 
     def process_answer_host(self):
@@ -406,6 +413,12 @@ class AetherApp(ctk.CTkFrame):
         try:
             answer_data = json.loads(answer_str)
             self.run_async(self.set_remote_answer(answer_data))
+            
+            # Save as trusted peer if info exists
+            if "id" in answer_data:
+                self.save_trusted_peer(answer_data)
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⭐ {answer_data.get('user', 'Peer')} güvenilir cihazlara eklendi!"))
+                
         except Exception as e:
             messagebox.showerror("Hata", f"Geçersiz kod: {e}")
 
@@ -434,22 +447,37 @@ class AetherApp(ctk.CTkFrame):
         
         def process_offer_and_generate_answer():
             offer_str = entry_offer.get()
-            offer_json = json.loads(offer_str)
-            rd = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
-            
-            async def generate():
-                await self.pc.setRemoteDescription(rd)
-                answer = await self.pc.createAnswer()
-                await self.pc.setLocalDescription(answer)
+            try:
+                offer_json = json.loads(offer_str)
+                rd = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
                 
-                ans_data = json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type})
+                # Save Host as Trusted
+                if "id" in offer_json:
+                    self.save_trusted_peer(offer_json)
+                    self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⭐ {offer_json.get('user', 'Host')} güvenilir cihazlara eklendi!"))
                 
-                ctk.CTkLabel(self.frame_signaling, text="BU CEVABI KARŞIYA GÖNDER:", text_color="gray").pack(pady=(20, 5))
-                entry_ans = ctk.CTkEntry(self.frame_signaling, width=400)
-                entry_ans.pack(pady=5)
-                entry_ans.insert(0, ans_data)
-                
-            self.run_async(generate())
+                async def generate():
+                    await self.pc.setRemoteDescription(rd)
+                    answer = await self.pc.createAnswer()
+                    await self.pc.setLocalDescription(answer)
+                    
+                    local_ip = self.discovery._get_local_ip_and_broadcast()[0] if hasattr(self, 'discovery') else "0.0.0.0"
+                    ans_data = json.dumps({
+                        "sdp": self.pc.localDescription.sdp, 
+                        "type": self.pc.localDescription.type,
+                        "id": self.discovery.device_id,
+                        "user": self.discovery.username,
+                        "ip": local_ip
+                    })
+                    
+                    ctk.CTkLabel(self.frame_signaling, text="BU CEVABI KARŞIYA GÖNDER:", text_color="gray").pack(pady=(20, 5))
+                    entry_ans = ctk.CTkEntry(self.frame_signaling, width=400)
+                    entry_ans.pack(pady=5)
+                    entry_ans.insert(0, ans_data)
+                    
+                self.run_async(generate())
+            except Exception as e:
+                messagebox.showerror("Hata", f"Geçersiz kod: {e}")
             
         ctk.CTkButton(self.frame_signaling, text="KODU OLUŞTUR (ANSWER)", command=process_offer_and_generate_answer).pack(pady=10)
 
