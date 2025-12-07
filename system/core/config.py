@@ -16,6 +16,7 @@ THEME = {
         "bg_sidebar": "#16161c",    # Slightly Lighter
         "bg_card": "#1f1f26",       # Card Background
         "bg_card_hover": "#2a2a33", # Card Hover
+        "surface_variant": "#25252e", # Slightly lighter than card for variants
         
         "text_primary": "#ffffff",
         "text_secondary": "#a0a0a0",
@@ -26,6 +27,7 @@ THEME = {
         
         "danger": "#ff1744",        # Neon Red
         "success": "#00e676",       # Neon Green
+        "success_hover": "#00c853", # Darker Green
         "border": "#2c2c36"
     },
     "fonts": {
