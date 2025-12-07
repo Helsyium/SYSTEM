@@ -2,6 +2,8 @@ import socket
 import json
 import threading
 import asyncio
+from collections import deque
+import time
 
 class HandshakeManager:
     """
@@ -40,6 +42,11 @@ class HandshakeManager:
         
         self.running = True
         self.callback_on_offer = callback_on_offer # Must return Answer JSON
+        
+        # Anti-Replay: Track processed offer IDs/Nonces
+        # A simple deque to store last 1000 message hashes or nonces
+        self.processed_nonces = deque(maxlen=1000)
+        self.processed_nonces_lock = threading.Lock()
         
         # Start UPnP Port Mapping in Background
         threading.Thread(target=self._setup_upnp, daemon=True).start()
@@ -93,6 +100,22 @@ class HandshakeManager:
                 
             offer_str = data.decode('utf-8')
             offer_json = json.loads(offer_str)
+            
+            # === ANTI-REPLAY CHECK ===
+            # We expect a 'nonce' or unique ID in top level of offer_json for security v2
+            # If missing, we generate a hash of the content as a fallback nonce (less secure but works)
+            nonce = offer_json.get("nonce")
+            if not nonce:
+                # Fallback: Hash of SDP gives some dedup ability
+                import hashlib
+                nonce = hashlib.sha256(offer_str.encode()).hexdigest()
+            
+            with self.processed_nonces_lock:
+                if nonce in self.processed_nonces:
+                    print(f"[HANDSHAKE] REPLAY DETECTED. Dropping duplicate offer. Nonce: {nonce[:8]}...")
+                    return # Silently drop or send error
+                self.processed_nonces.append(nonce)
+            # =========================
             
             print("[HANDSHAKE] Offer received. Generating answer...")
             

@@ -7,6 +7,8 @@ import logging
 import hmac
 import hashlib
 from typing import Callable, Dict
+from collections import deque
+import secrets
 
 import os
 
@@ -15,6 +17,7 @@ BROADCAST_IP = "255.255.255.255"
 DISCOVERY_PORT = 50005
 BEACON_INTERVAL = 2.0  # Seconds
 SECRET_KEY = b"AETHER_SECURE_V1" # Shared secret for LAN security
+replay_window = 5.0 # Max age of a beacon in seconds
 
 class NetworkDiscovery:
     """
@@ -31,6 +34,7 @@ class NetworkDiscovery:
         self.running = False
         self.peers: Dict[str, dict] = {} 
         self.peers_lock = threading.Lock() # Thread Safety
+        self.seen_nonces = deque(maxlen=1000) # Replay Protection Cache
         self.on_peer_found: Callable = None
         
         # Sockets
@@ -128,7 +132,8 @@ class NetworkDiscovery:
                     "user": self.username,
                     "ip": local_ip, # Send explicit IP
                     "port": self.tcp_port,
-                    "ts": time.time()
+                    "ts": time.time(),
+                    "n": secrets.token_hex(4) # 8-char Nonce for Replay Protection
                 }
                 
                 payload_str = json.dumps(msg)
@@ -180,6 +185,25 @@ class NetworkDiscovery:
                         # print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
                         continue
                         
+                        # print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
+                        continue
+                    
+                    # === REPLAY PROTECTION ===
+                    ts = payload.get("ts", 0)
+                    nonce = payload.get("n", "")
+                    
+                    now_ts = time.time()
+                    if abs(now_ts - ts) > replay_window:
+                        # print(f"[DISCOVERY] Replay Rejected (Timestamp): {sender_ip}")
+                        continue
+                        
+                    if nonce in self.seen_nonces:
+                        # print(f"[DISCOVERY] Replay Rejected (Nonce): {sender_ip}")
+                        continue
+                    
+                    self.seen_nonces.append(nonce)
+                    # =========================
+
                     msg = payload
                     
                 except:

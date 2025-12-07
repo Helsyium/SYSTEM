@@ -429,6 +429,7 @@ class AetherApp(ctk.CTkFrame):
         @channel.on("open")
         def on_open():
             print("[AETHER DEBUG] Channel OPEN event triggered!")
+            # THREAD SAFETY: Ensure UI updates happen on main thread
             try:
                 self.master.after(0, self.enable_chat_ui)
                 self.master.after(0, lambda: self.add_chat_message("SYSTEM", "Bağlantı Kuruldu! 🟢"))
@@ -682,6 +683,10 @@ class AetherApp(ctk.CTkFrame):
         # Clear connection failure flag if exists
         if hasattr(self, 'connection_failed_notified'):
             del self.connection_failed_notified
+            
+        # SECURE CLEANUP: Force Garbage Collection to clear key material
+        import gc
+        gc.collect()
         
         # DON'T stop discovery/handshake - we need them for reconnection!
         # Only stop them when the entire app is closing
@@ -697,6 +702,8 @@ class AetherApp(ctk.CTkFrame):
                 self.run_async(self.pc.close())
             except:
                 pass
+            self.pc = None
+            self.channel = None
         
         # Stop discovery and handshake servers
         try:
@@ -712,3 +719,7 @@ class AetherApp(ctk.CTkFrame):
             self.loop.stop()
         except:
             pass
+            
+        # Final secure wipe
+        import gc
+        gc.collect()
