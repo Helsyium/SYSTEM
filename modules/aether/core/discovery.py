@@ -253,11 +253,13 @@ class NetworkDiscovery:
 
                 # 1. Self Check by ID (Robust)
                 if msg.get("id") == self.device_id:
+                    print(f"[DISCOVERY] Ignoring self (ID match: {self.device_id[:8]})")
                     continue 
 
                 # 2. Self Check by IP (Optional backup, but ID is better)
                 # We skip this because we might rely on ID if NAT makes IPs weird.
                 
+                print(f"[DISCOVERY] Valid peer packet from {sender_ip} | User: {msg.get('user', 'Unknown')}")
                 # Handle Peer Found
                 self._handle_peer(sender_ip, msg)
                 
