@@ -414,7 +414,8 @@ class AetherApp(ctk.CTkFrame):
             "type": self.pc.localDescription.type,
             "id": self.discovery.device_id,
             "user": self.discovery.username,
-            "ip": local_ip
+            "ip": local_ip,
+            "port": self.handshake.port # Save listening port for future reconnections
         })
         self.master.after(0, lambda: self.txt_offer.insert("0.0", offer_json))
 
@@ -481,7 +482,8 @@ class AetherApp(ctk.CTkFrame):
                         "type": self.pc.localDescription.type,
                         "id": self.discovery.device_id,
                         "user": self.discovery.username,
-                        "ip": local_ip
+                        "ip": local_ip,
+                        "port": self.handshake.port # Save listening port for future reconnections
                     })
                     
                     ctk.CTkLabel(self.frame_signaling, text="BU CEVABI KARŞIYA GÖNDER:", text_color="gray").pack(pady=(20, 5))
