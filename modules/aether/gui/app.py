@@ -306,6 +306,29 @@ class AetherApp(ctk.CTkFrame):
             print(f"[AETHER DEBUG] ICE state: {state}")
             self.update_status(f"ICE Durumu: {state}")
             
+            if state in ["connected", "completed"]:
+                # Smart IP Learning: Capture the ACTUAL IP used for connection
+                try:
+                    # Get the selected candidate pair
+                    transport = pc.sctp.transport
+                    if transport.iceTransport:
+                        pair = transport.iceTransport.getSelectedCandidatePair()
+                        if pair and pair.remote:
+                            real_ip = pair.remote.ip
+                            print(f"[AETHER] Smart IP Learning: Connected via {real_ip}")
+                            
+                            # Update Trusted Peer IP if it's different and we know the ID
+                            if hasattr(self, 'current_peer_id') and self.current_peer_id:
+                                pid = self.current_peer_id
+                                if pid in self.trusted_peers:
+                                    # Only update if different to avoid redundant writes
+                                    if self.trusted_peers[pid].get('last_ip') != real_ip:
+                                        print(f"[AETHER] Updating Trusted Peer {pid} IP from {self.trusted_peers[pid].get('last_ip')} to {real_ip}")
+                                        self.trusted_peers[pid]['last_ip'] = real_ip
+                                        self.save_trusted_pairs_to_disk()
+                except Exception as e:
+                    print(f"[AETHER DEBUG] Failed to get selected candidate pair: {e}")
+
             # Handle failed/disconnected states
             if state == "failed":
                 self.master.after(0, lambda: self.handle_connection_failure("ICE bağlantısı başarısız"))
@@ -321,6 +344,10 @@ class AetherApp(ctk.CTkFrame):
             print(f"[AETHER DEBUG] Connection state: {state}")
             self.update_status(f"Bağlantı Durumu: {state}")
             
+            if state == "connected":
+               # Also try Smart IP Learning here just in case
+               pass
+
             if state == "failed":
                 self.master.after(0, lambda: self.handle_connection_failure("WebRTC bağlantısı başarısız"))
             elif state == "closed":
@@ -645,6 +672,7 @@ class AetherApp(ctk.CTkFrame):
             return
         
         try:
+            self.current_peer_id = peer_info.get('id') # Track for Smart IP Learning
             # 1. Generate Offer
             self.pc = self.create_pc()
             self.channel = self.pc.createDataChannel("chat")
@@ -684,6 +712,8 @@ class AetherApp(ctk.CTkFrame):
         
         # Check trust?
         peer_id = offer_json.get("id")
+        if peer_id:
+            self.current_peer_id = peer_id # Track for Smart IP Learning
         if peer_id and peer_id in self.trusted_peers:
             print(f"[AETHER AUTO] Trusted Peer Connecting: {self.trusted_peers[peer_id]['user']}")
             # We could auto-accept here without any prompt if we wanted 'silent accept'
