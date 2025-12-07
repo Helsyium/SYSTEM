@@ -798,7 +798,7 @@ class AetherApp(ctk.CTkFrame):
     async def async_auto_connect(self, target_ip, target_port):
         """Asynchronous auto-connect logic."""
         if not self.pc:
-            self.create_pc()
+            self.pc = self.create_pc()
 
         peer_id = None
         # Try to find peer ID from IP (Reverse Lookup)
