@@ -129,6 +129,13 @@ class FileTransferManager:
     def _handle_metadata(self, meta: dict):
         """Start receiving a new file."""
         file_id = meta["id"]
+        
+        # [FIX] Idempotency: If we are already receiving this file, ignore the duplicate metadata packet.
+        with self.lock:
+            if file_id in self.incoming_transfers:
+                print(f"[FILE] Ignoring duplicate metadata for {file_id}")
+                return
+
         filename = self._sanitize_filename(meta["name"])
         filesize = meta["size"]
         file_hash = meta.get("hash", "") # [NEW] Get expected hash
