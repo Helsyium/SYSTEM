@@ -185,7 +185,7 @@ class NetworkDiscovery:
                 
                 # Send to Directed Broadcast (Address specific subnet)
                 self.sock_broadcast.sendto(data, (broadcast_target, DISCOVERY_PORT))
-                print(f"[DISCOVERY] Sent beacon to {broadcast_target}:{DISCOVERY_PORT}")
+                # print(f"[DISCOVERY] Sent beacon to {broadcast_target}:{DISCOVERY_PORT}")
                 
                 # Also send to General Broadcast (Fallback)
                 self.sock_broadcast.sendto(data, ("255.255.255.255", DISCOVERY_PORT))
@@ -205,7 +205,7 @@ class NetworkDiscovery:
             try:
                 data, addr = self.sock_listen.recvfrom(2048) # Increased buffer for signature
                 sender_ip = addr[0]
-                print(f"[DISCOVERY] Received {len(data)} bytes from {sender_ip}")
+                # print(f"[DISCOVERY] Received {len(data)} bytes from {sender_ip}")
                 
                 # Decode
                 try:
@@ -224,7 +224,7 @@ class NetworkDiscovery:
                     
                     # Prevent timing attacks (overt for LAN but good practice)
                     if not hmac.compare_digest(signature, expected_sig):
-                        print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
+                        # print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
                         continue
                         
                     
@@ -234,11 +234,11 @@ class NetworkDiscovery:
                     
                     now_ts = time.time()
                     if abs(now_ts - ts) > replay_window:
-                        print(f"[DISCOVERY] Replay Rejected (Timestamp Skew: {now_ts - ts:.1f}s) from {sender_ip}")
+                        # print(f"[DISCOVERY] Replay Rejected (Timestamp Skew: {now_ts - ts:.1f}s) from {sender_ip}")
                         continue
                         
                     if nonce in self.seen_nonces:
-                        print(f"[DISCOVERY] Replay Rejected (Duplicate Nonce) from {sender_ip}")
+                        # print(f"[DISCOVERY] Replay Rejected (Duplicate Nonce) from {sender_ip}")
                         continue
                     
                     self.seen_nonces.append(nonce)
@@ -252,13 +252,13 @@ class NetworkDiscovery:
 
                 # 1. Self Check by ID (Robust)
                 if msg.get("id") == self.device_id:
-                    print(f"[DISCOVERY] Ignoring self (ID match: {self.device_id[:8]})")
+                    # print(f"[DISCOVERY] Ignoring self (ID match: {self.device_id[:8]})")
                     continue 
 
                 # 2. Self Check by IP (Optional backup, but ID is better)
                 # We skip this because we might rely on ID if NAT makes IPs weird.
                 
-                print(f"[DISCOVERY] Valid peer packet from {sender_ip} | User: {msg.get('user', 'Unknown')}")
+                # print(f"[DISCOVERY] Valid peer packet from {sender_ip} | User: {msg.get('user', 'Unknown')}")
                 # Handle Peer Found
                 self._handle_peer(sender_ip, msg)
                 
