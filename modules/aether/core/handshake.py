@@ -63,6 +63,12 @@ class HandshakeManager:
             # Ideally callback should handle thread sync.
             answer_json = self.callback_on_offer(offer_json)
             
+            # Handle case where app is busy (returns None)
+            if answer_json is None:
+                print("[HANDSHAKE] Server busy, connection rejected")
+                conn.send(b"BUSY")
+                return
+            
             # 4. Send Answer
             answer_bytes = json.dumps(answer_json).encode('utf-8')
             conn.send(len(answer_bytes).to_bytes(4, 'big'))
@@ -100,6 +106,11 @@ class HandshakeManager:
             s.settimeout(15)  # Give more time for answer generation (WebRTC can be slow)
             header = s.recv(4)
             if not header: raise ValueError("No response from peer (empty header)")
+            
+            # Check for BUSY signal
+            if header == b"BUSY":
+                raise Exception("Peer is busy with another connection. Please wait and try again.")
+            
             length = int.from_bytes(header, 'big')
             
             data = b""
