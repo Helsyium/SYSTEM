@@ -748,32 +748,27 @@ class AetherApp(ctk.CTkFrame):
 
     async def async_send_file(self, filepath):
         try:
-            # 1. Prepare Metadata (Calculates Hash)
+            # 1. Prepare Metadata (Calculates Hash) - Heavy task, run in executor
             meta = await self.loop.run_in_executor(None, self.file_manager.prepare_upload, filepath)
             
             # 2. Send Metadata
             self.channel.send(json.dumps(meta))
             
             # 3. Send Chunks
-            for chunk in self.loop.run_in_executor(None, lambda: list(self.file_manager.read_chunks(filepath, meta['id']))):
-                 # We iterate list() here to force generator to run in executor if heavy, 
-                 # but actually read_chunks yields.
-                 # Better approach for async loop:
-                 pass
-            
-            # Proper Async Generator iteration
-            # Since read_chunks is sync generator, we run it directly but be careful of blocking
-            # Ideally rewrite read_chunks to be no-blocking or small chunks. 
-            # Given 16KB chunks, direct iteration is fine if we yield control.
+            # We iterate directly. Since chunks are small (16KB), the blocking time per chunk is negligible.
+            # We yield to the event loop (await asyncio.sleep) to keep UI responsive.
             
             gen = self.file_manager.read_chunks(filepath, meta['id'])
             for chunk_msg in gen:
                 self.channel.send(json.dumps(chunk_msg))
-                await asyncio.sleep(0.001) # Yield to event loop to keep UI responsive
+                # Yield control to allow UI updates and other async events processing
+                await asyncio.sleep(0.005) 
                 
         except Exception as e:
-            print(f"[FILE ERROR] {e}")
-            self.master.after(0, lambda: messagebox.showerror("Transfer Hatası", str(e)))
+            err_msg = str(e)
+            print(f"[FILE ERROR] {err_msg}")
+            # Fix: Capture err_msg in lambda, not 'e' itself which is GC'd
+            self.master.after(0, lambda: messagebox.showerror("Transfer Hatası", err_msg))
 
     def update_file_progress(self, filename, percent, status):
         """Called by FileTransferManager on p_rogress."""
