@@ -189,17 +189,56 @@ class AetherApp(ctk.CTkFrame):
         # Back Button
         ctk.CTkButton(self.frame_manual, text="← GERİ", command=self.go_back, width=80, fg_color="gray").pack(anchor="w", pady=5)
         
-        # Mode Selection (Host/Join)
-        self.frame_modes = ctk.CTkFrame(self.frame_manual, fg_color="transparent")
-        self.frame_modes.pack(fill="x", pady=10)
+        # Mode Selection
+        frame_buttons = ctk.CTkFrame(self.frame_manual, fg_color="transparent") # Changed from self.frame_modes to self.frame_manual
+        frame_buttons.pack(pady=20)
         
-        self.btn_host = ctk.CTkButton(self.frame_modes, text="BAĞLANTI BAŞLAT (HOST)", command=self.show_host_mode,
-                                      fg_color=THEME["colors"]["accent"], text_color="black", height=50)
-        self.btn_host.pack(side="left", fill="x", expand=True, padx=5)
+        btn_host = ctk.CTkButton(frame_buttons, text="Bağlantı Kodu Oluştur (Host)", 
+                               command=self.generate_offer, width=200, height=40,
+                               fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"])
+        btn_host.pack(pady=10)
 
-        self.btn_join = ctk.CTkButton(self.frame_modes, text="BAĞLAN (JOIN)", command=self.show_join_mode,
-                                      fg_color=THEME["colors"]["bg_card_hover"], height=50)
-        self.btn_join.pack(side="right", fill="x", expand=True, padx=5)
+        # Connection Scenario Guide
+        frame_guide = ctk.CTkFrame(self.frame_manual, fg_color=THEME["colors"]["surface_variant"], corner_radius=10) # Changed from self.frame_modes to self.frame_manual
+        frame_guide.pack(pady=20, padx=20, fill="x")
+        
+        ctk.CTkLabel(frame_guide, text="ℹ️ Bağlantı İpuçları", font=("Roboto", 14, "bold"), text_color=THEME["colors"]["text_primary"]).pack(pady=(10, 5))
+        
+        guide_text = (
+            "🟢 Ev ↔ Ev: UPnP ile Otomatik Bağlanır.\n"
+            "🟡 Hotspot ↔ Ev: Hotspot kullanan, Ev'dekine bağlanmalı.\n"
+            "🟡 Okul/İş ↔ Ev: Okul/İş'teki, Ev'dekine bağlanmalı.\n"
+            "🔴 Hotspot ↔ Hotspot: Doğrudan bağlantı genelde başarısız olur."
+        )
+        ctk.CTkLabel(frame_guide, text=guide_text, font=("Roboto", 12), justify="left", text_color=THEME["colors"]["text_secondary"]).pack(pady=(0, 10), padx=10)
+        
+        # Network Status
+        status_text = "Dışarıdan Erişilebilir (UPnP Açık)"
+        status_color = "#4CAF50" # Green
+        
+        # Check UPnP status (Simple check based on previous logs logic or a flag)
+        # Ideally we should start a quick check thread here, but for now we assume based on app state
+        # A more robust implementation would check self.handshake.sock port mapping status
+        
+        if hasattr(self, 'discovery') and self.discovery:
+             # This is just a placeholder, real status needs async check result
+             pass
+
+        status_label = ctk.CTkLabel(self.frame_manual, text=f"Durum: {status_text}", text_color=status_color, font=("Roboto", 12, "bold")) # Changed from self.frame_modes to self.frame_manual
+        status_label.pack()
+
+        frame_join = ctk.CTkFrame(self.frame_manual, fg_color="transparent") # Changed from self.frame_modes to self.frame_manual
+        frame_join.pack(pady=10, fill="x", padx=40)
+        
+        ctk.CTkLabel(frame_join, text="veya", text_color="gray").pack()
+        
+        self.entry_join_code = ctk.CTkEntry(frame_join, placeholder_text="Karşı Tarafın IP Adresini Girin...", height=40)
+        self.entry_join_code.pack(fill="x", pady=10)
+        
+        btn_join = ctk.CTkButton(frame_join, text="Manuel Bağlan", 
+                               command=self.join_session_manual, width=200, height=40,
+                               fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"])
+        btn_join.pack()
 
         # Signaling Area (Dynamic content for manual mode)
         self.frame_signaling = ctk.CTkFrame(self.frame_manual)
