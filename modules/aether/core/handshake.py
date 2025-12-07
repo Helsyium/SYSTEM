@@ -39,9 +39,30 @@ class HandshakeManager:
         self.running = True
         self.callback_on_offer = callback_on_offer # Must return Answer JSON
         
+        # Start UPnP Port Mapping in Background
+        threading.Thread(target=self._setup_upnp, daemon=True).start()
+        
         # Start Listener Thread
         self.thread = threading.Thread(target=self._accept_loop, daemon=True)
         self.thread.start()
+        
+    def _setup_upnp(self):
+        """Attempts to open the TCP port on the Router via UPnP."""
+        try:
+            from modules.aether.core.upnp import UPnPManager
+            upnp = UPnPManager()
+            if upnp.discover():
+                print(f"[AETHER UPnP] Gateway found at {upnp.gateway_url}")
+                # Try to map external port same as local port
+                success = upnp.add_port_mapping(self.port, self.port, "TCP", description="Aether P2P Handshake")
+                if success:
+                    print(f"[AETHER UPnP] SUCCESS! Port {self.port} is now open to WAN.")
+                else:
+                    print(f"[AETHER UPnP] Failed to add port mapping.")
+            else:
+                print(f"[AETHER UPnP] No UPnP Gateway found.")
+        except Exception as e:
+            print(f"[AETHER UPnP] Error: {e}")
         
     def _accept_loop(self):
         print(f"[HANDSHAKE] Listening on TCP {self.port}")
