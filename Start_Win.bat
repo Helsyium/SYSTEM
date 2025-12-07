@@ -1,18 +1,5 @@
-@echo off
-TITLE SYSTEM HUB
-CD /D "%~dp0"
-
-:: Check for Administrator privileges and re-run if needed
->nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
-IF '%errorlevel%' NEQ '0' (
-    ECHO [INFO] Requesting Administrator privileges...
-    ECHO [INFO] Please click 'Yes' on the UAC prompt.
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    EXIT /B
-)
-
 ECHO ===================================================
-ECHO   SYSTEM HUB - LAUNCHER (ADMIN MODE)
+ECHO   SYSTEM HUB - LAUNCHER
 ECHO ===================================================
 ECHO.
 

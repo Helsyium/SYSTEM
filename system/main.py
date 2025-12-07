@@ -74,9 +74,10 @@ def configure_firewall():
                 capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
             )
 
-        print("[SYSTEM] Windows Network & Firewall configured successfully.")
+        print("[SYSTEM] Network configuration check...")
     except Exception as e:
-        print(f"[SYSTEM] Firewall configuration warning: {e}")
+        # Silently fail or log to file, don't spam console
+        pass
 
 if __name__ == "__main__":
     configure_firewall()
