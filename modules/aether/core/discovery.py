@@ -18,7 +18,7 @@ MULTICAST_GROUP = "239.1.1.1" # Multicast Address
 DISCOVERY_PORT = 50005
 BEACON_INTERVAL = 2.0  # Seconds
 SECRET_KEY = b"AETHER_SECURE_V1" # Shared secret for LAN security
-replay_window = 5.0 # Max age of a beacon in seconds
+replay_window = 30.0 # Max age of a beacon in seconds (Increased from 5s to 30s for clock skew)
 
 class NetworkDiscovery:
     """
@@ -224,11 +224,9 @@ class NetworkDiscovery:
                     
                     # Prevent timing attacks (overt for LAN but good practice)
                     if not hmac.compare_digest(signature, expected_sig):
-                        # print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
+                        print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
                         continue
                         
-                        # print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
-                        continue
                     
                     # === REPLAY PROTECTION ===
                     ts = payload.get("ts", 0)
@@ -236,11 +234,11 @@ class NetworkDiscovery:
                     
                     now_ts = time.time()
                     if abs(now_ts - ts) > replay_window:
-                        # print(f"[DISCOVERY] Replay Rejected (Timestamp): {sender_ip}")
+                        print(f"[DISCOVERY] Replay Rejected (Timestamp Skew: {now_ts - ts:.1f}s) from {sender_ip}")
                         continue
                         
                     if nonce in self.seen_nonces:
-                        # print(f"[DISCOVERY] Replay Rejected (Nonce): {sender_ip}")
+                        print(f"[DISCOVERY] Replay Rejected (Duplicate Nonce) from {sender_ip}")
                         continue
                     
                     self.seen_nonces.append(nonce)
@@ -248,7 +246,8 @@ class NetworkDiscovery:
 
                     msg = payload
                     
-                except:
+                except Exception as e:
+                    print(f"[DISCOVERY] Packet Decode Error from {sender_ip}: {e}")
                     continue
 
                 # 1. Self Check by ID (Robust)
