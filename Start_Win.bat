@@ -43,6 +43,9 @@ IF %ERRORLEVEL% NEQ 0 (
     venv\Scripts\python.exe -m pip install aiortc --no-deps
     venv\Scripts\python.exe -m pip install aioice google-crc32c pyee pylibsrtp ifaddr dnspython opencv-python pyopenssl
     
+    :: Install Base UI & System Libs (Missed if requirements.txt failed)
+    venv\Scripts\python.exe -m pip install customtkinter Pillow darkdetect packaging setuptools argon2-cffi cryptography
+    
     ECHO [BILGI] Ozel kurulum tamamlandi.
 )
 
