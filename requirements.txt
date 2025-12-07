@@ -14,6 +14,7 @@ setuptools==80.9.0
 Pillow
 # AETHER P2P Dependencies (Pinned for Stability)
 aiortc==1.11.0
-av==13.0.0
+av==13.0.0; sys_platform == 'win32'
+av>=14.0.0; sys_platform != 'win32'
 opencv-python
 pyopenssl>=25.0.0
