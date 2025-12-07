@@ -150,21 +150,24 @@ class UPnPManager:
             print("[UPnP] Cannot add mapping: Service or Local IP not found.")
             return False
 
-        soap_body = f"""<?xml version="1.0"?>
-        <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-        <s:Body>
-        <u:AddPortMapping xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1">
-        <NewRemoteHost></NewRemoteHost>
-        <NewExternalPort>{external_port}</NewExternalPort>
-        <NewProtocol>{protocol}</NewProtocol>
-        <NewInternalPort>{internal_port}</NewInternalPort>
-        <NewInternalClient>{self.local_ip}</NewInternalClient>
-        <NewEnabled>1</NewEnabled>
-        <NewPortMappingDescription>{description}</NewPortMappingDescription>
-        <NewLeaseDuration>{lease_duration}</NewLeaseDuration>
-        </u:AddPortMapping>
-        </s:Body>
-        </s:Envelope>"""
+        # Clean, minimized XML to avoid parsing issues on strict routers
+        soap_body = (
+            '<?xml version="1.0"?>'
+            '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
+            '<s:Body>'
+            '<u:AddPortMapping xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1">'
+            '<NewRemoteHost></NewRemoteHost>'
+            f'<NewExternalPort>{external_port}</NewExternalPort>'
+            f'<NewProtocol>{protocol}</NewProtocol>'
+            f'<NewInternalPort>{internal_port}</NewInternalPort>'
+            f'<NewInternalClient>{self.local_ip}</NewInternalClient>'
+            '<NewEnabled>1</NewEnabled>'
+            f'<NewPortMappingDescription>{description}</NewPortMappingDescription>'
+            f'<NewLeaseDuration>{lease_duration}</NewLeaseDuration>'
+            '</u:AddPortMapping>'
+            '</s:Body>'
+            '</s:Envelope>'
+        )
 
         headers = {
             'SOAPAction': '"urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping"',
@@ -178,7 +181,53 @@ class UPnPManager:
                 if resp.status == 200:
                     print(f"[UPnP] Successfully mapped {protocol} {external_port} -> {self.local_ip}:{internal_port}")
                     return True
+        except urllib.error.HTTPError as e:
+            # Read detailed SOAP Fault
+            error_content = e.read().decode()
+            print(f"[UPnP] AddPortMapping Failed (HTTP {e.code}): {error_content}")
+            
+            # Simple Fallback: Try without LeaseDuration (some old routers hate it)
+            if "LeaseDuration" in error_content or e.code == 500:
+                 return self._add_port_mapping_fallback(external_port, internal_port, protocol, description)
+                 
         except Exception as e:
             print(f"[UPnP] AddPortMapping Failed: {e}")
             
+        return False
+
+    def _add_port_mapping_fallback(self, external_port, internal_port, protocol, description):
+        """Fallback method for older routers (No LeaseDuration)."""
+        print("[UPnP] Retrying with Fallback Strategy (No LeaseDuration)...")
+        soap_body = (
+            '<?xml version="1.0"?>'
+            '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
+            '<s:Body>'
+            '<u:AddPortMapping xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1">'
+            '<NewRemoteHost></NewRemoteHost>'
+            f'<NewExternalPort>{external_port}</NewExternalPort>'
+            f'<NewProtocol>{protocol}</NewProtocol>'
+            f'<NewInternalPort>{internal_port}</NewInternalPort>'
+            f'<NewInternalClient>{self.local_ip}</NewInternalClient>'
+            '<NewEnabled>1</NewEnabled>'
+            f'<NewPortMappingDescription>{description}</NewPortMappingDescription>'
+            '</u:AddPortMapping>'
+            '</s:Body>'
+            '</s:Envelope>'
+        )
+        
+        headers = {
+            'SOAPAction': '"urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping"',
+            'Content-Type': 'text/xml; charset="utf-8"',
+            'Content-Length': str(len(soap_body))
+        }
+
+        try:
+             req = urllib.request.Request(self.service_url, data=soap_body.encode(), headers=headers)
+             with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    print(f"[UPnP] Fallback Success! Mapped {protocol} {external_port} -> {self.local_ip}:{internal_port}")
+                    return True
+        except Exception as e:
+             print(f"[UPnP] Fallback Failed: {e}")
+             
         return False
