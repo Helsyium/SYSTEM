@@ -74,6 +74,7 @@ class AetherApp(ctk.CTkFrame):
         self.trusted_peers[pid] = {
             "user": peer_data["user"],
             "last_ip": peer_data["ip"],
+            "last_port": peer_data.get("port"),
             "trusted": True
         }
         try:
@@ -222,12 +223,25 @@ class AetherApp(ctk.CTkFrame):
             card = ctk.CTkFrame(self.scroll_trusted, fg_color=THEME["colors"]["bg_card"])
             card.pack(fill="x", pady=5)
             
-            lbl = ctk.CTkLabel(card, text=f"{data.get('user', 'Unknown')} ({data.get('last_ip', '?')})", font=("Roboto", 12, "bold"))
+            # Check if peer is currently online in discovery
+            live_peer = self.discovery.peers.get(pid) if hasattr(self, 'discovery') else None
+            
+            status_text = "🟢 ÇEVRİMİÇİ" if live_peer else "⚫ ÇEVRİMDIŞI"
+            user_text = f"{data.get('user', 'Unknown')} ({data.get('last_ip', '?')}) {status_text}"
+            
+            lbl = ctk.CTkLabel(card, text=user_text, font=("Roboto", 12, "bold"))
             lbl.pack(side="left", padx=10, pady=10)
             
-            # Direct Connect button (tries last known IP) -> Might fail if IP changed, but worth a shot or just Manual logic trigger
-            btn = ctk.CTkButton(card, text="BAĞLAN", width=80, 
-                                command=lambda p=data: self.start_auto_connection({"ip": p['last_ip'], "port": self.handshake.port, "user": p['user'], "id": pid}))
+            # Connect button - use live peer data if available, otherwise use cached data
+            if live_peer:
+                # Peer is online, use current discovery info
+                btn = ctk.CTkButton(card, text="BAĞLAN", width=80, 
+                                    command=lambda p=live_peer, i=pid: self.start_auto_connection({**p, "id": i}),
+                                    fg_color=THEME["colors"]["success"])
+            else:
+                # Peer offline, disable button or show warning
+                btn = ctk.CTkButton(card, text="ÇEVRİMDIŞI", width=80, state="disabled",
+                                    fg_color="gray")
             btn.pack(side="right", padx=10)
 
     def build_chat_panel(self):
