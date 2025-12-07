@@ -27,25 +27,44 @@ class UPnPManager:
                       "MX: {}\r\n".format(SSDP_MX) + \
                       "ST: {}\r\n".format(SSDP_ST) + "\r\n"
 
+        # Try to find the correct interface by connecting to a public DNS
+        try:
+            temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            temp_sock.connect(("8.8.8.8", 80))
+            self.local_ip = temp_sock.getsockname()[0]
+            temp_sock.close()
+        except:
+            self.local_ip = socket.gethostbyname(socket.gethostname())
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(3)
+        
+        # Bind to the specific local IP to ensure we use the correct interface
+        try:
+            sock.bind((self.local_ip, 0))
+        except:
+            pass # Fallback to default
+            
         try:
             sock.sendto(ssdpRequest.encode(), (SSDP_ADDR, SSDP_PORT))
-            data, addr = sock.recvfrom(1024)
-            self.local_ip = self._get_local_ip(addr[0]) # Get local IP relative to gateway
             
-            # Parse response for Location
-            response = data.decode()
-            location = None
-            for line in response.split('\r\n'):
-                if line.lower().startswith('location:'):
-                    location = line.split(':', 1)[1].strip()
+            while True:  # Read all responses
+                try:
+                    data, addr = sock.recvfrom(4096)
+                    # Use the first valid response
+                    response = data.decode()
+                    location = None
+                    for line in response.split('\r\n'):
+                        if line.lower().startswith('location:'):
+                            location = line.split(':', 1)[1].strip()
+                            break
+                    
+                    if location:
+                        self.gateway_url = location
+                        self._parse_desc(location)
+                        return True
+                except socket.timeout:
                     break
-            
-            if location:
-                self.gateway_url = location
-                self._parse_desc(location)
-                return True
         except Exception as e:
             print(f"[UPnP] Discovery Failed: {e}")
         finally:
