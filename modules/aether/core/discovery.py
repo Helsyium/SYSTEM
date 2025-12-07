@@ -24,11 +24,10 @@ class NetworkDiscovery:
         self.storage_dir = storage_dir or os.getcwd()
         self.device_id = self._load_or_create_device_id()
         self.username = username
-        self.tcp_port = tcp_port # Port for Handshake
+        self.tcp_port = tcp_port
         self.running = False
-        self.peers: Dict[str, dict] = {} # {device_id: info_dict}
+        self.peers: Dict[str, dict] = {} 
         self.on_peer_found: Callable = None
-        self.on_peer_lost: Callable = None
         
         # Sockets
         self.sock_broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -37,66 +36,57 @@ class NetworkDiscovery:
         self.sock_listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_listen.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         
+        # Mac/Linux specific optimization
+        if hasattr(socket, "SO_REUSEPORT"):
+            try:
+                self.sock_listen.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            except:
+                pass
+
         # Threads
         self.thread_broadcast = None
         self.thread_listen = None
 
-    def _load_or_create_device_id(self):
-        """Load persistent device ID or create new one."""
-        id_file = os.path.join(self.storage_dir, "aether_identity.json")
-        if os.path.exists(id_file):
-            try:
-                with open(id_file, "r") as f:
-                    data = json.load(f)
-                    return data.get("device_id", str(uuid.uuid4()))
-            except:
-                pass
-        
-        new_id = str(uuid.uuid4())
+    def _get_local_ip_and_broadcast(self):
+        """Determine Local IP and subnet-specific broadcast address."""
         try:
-            with open(id_file, "w") as f:
-                json.dump({"device_id": new_id}, f)
+            # Connect to a public DNS to find the primary interface (no data sent)
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            
+            # Simple /24 assumption for home networks (192.168.1.x -> 192.168.1.255)
+            # This is much more reliable on Windows than 255.255.255.255
+            parts = local_ip.split('.')
+            parts[3] = '255'
+            broadcast_ip = '.'.join(parts)
+            return local_ip, broadcast_ip
         except:
-            pass
-        return new_id
-        
-    def start(self):
-        self.running = True
-        try:
-            # Bind to all interfaces
-            self.sock_listen.bind(("", DISCOVERY_PORT))
-        except Exception as e:
-            print(f"[DISCOVERY] Bind failed (Port {DISCOVERY_PORT} busy?): {e}")
-            return
-
-        self.thread_broadcast = threading.Thread(target=self._broadcast_loop, daemon=True)
-        self.thread_listen = threading.Thread(target=self._listen_loop, daemon=True)
-        
-        self.thread_broadcast.start()
-        self.thread_listen.start()
-        print(f"[DISCOVERY] Started. My ID: {self.device_id[:8]}")
-
-    def stop(self):
-        self.running = False
-        try:
-            self.sock_broadcast.close()
-            self.sock_listen.close()
-        except:
-            pass
+            return "127.0.0.1", "255.255.255.255"
 
     def _broadcast_loop(self):
         """Periodically broadcast presence."""
         while self.running:
             try:
+                local_ip, broadcast_target = self._get_local_ip_and_broadcast()
+                
                 msg = {
                     "aether_version": "1.0",
                     "id": self.device_id,
                     "user": self.username,
+                    "ip": local_ip, # Send explicit IP
                     "port": self.tcp_port,
                     "ts": time.time()
                 }
                 data = json.dumps(msg).encode('utf-8')
-                self.sock_broadcast.sendto(data, (BROADCAST_IP, DISCOVERY_PORT))
+                
+                # Send to Directed Broadcast (Address specific subnet)
+                self.sock_broadcast.sendto(data, (broadcast_target, DISCOVERY_PORT))
+                
+                # Also send to General Broadcast (Fallback)
+                self.sock_broadcast.sendto(data, ("255.255.255.255", DISCOVERY_PORT))
+                
             except Exception as e:
                 # print(f"[DISCOVERY] Broadcast error: {e}")
                 pass
