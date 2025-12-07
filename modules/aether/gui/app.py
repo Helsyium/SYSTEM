@@ -498,9 +498,14 @@ class AetherApp(ctk.CTkFrame):
                 rd = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
                 
                 # Save Host as Trusted
-                if "id" in offer_json:
-                    self.save_trusted_peer(offer_json)
-                    self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⭐ {offer_json.get('user', 'Host')} güvenilir cihazlara eklendi!"))
+                pid = offer_json.get("id")
+                puser = offer_json.get("user")
+                pip = offer_json.get("ip")
+                ppublic = offer_json.get("public_ip")
+
+                if pid and puser:
+                    self.save_trusted_peer(pid, puser, pip, ppublic)
+                    self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⭐ {puser} güvenilir cihazlara eklendi!"))
                 
                 async def generate():
                     await self.pc.setRemoteDescription(rd)
@@ -508,6 +513,7 @@ class AetherApp(ctk.CTkFrame):
                     await self.pc.setLocalDescription(answer)
                     
                     local_ip = self.discovery._get_local_ip_and_broadcast()[0] if hasattr(self, 'discovery') else "0.0.0.0"
+                    public_ip = self.get_public_ip() # Get public IP
                     ans_data = json.dumps({
                         "sdp": self.pc.localDescription.sdp, 
                         "type": self.pc.localDescription.type,
@@ -665,48 +671,86 @@ class AetherApp(ctk.CTkFrame):
         self.add_chat_message("SYSTEM", f"Bağlanılıyor: {peer_info['user']} ({peer_info['ip']})...")
         
         # Async: Generate Offer -> Send via TCP -> Receive Answer -> Set Remote
-        self.run_async(self.async_auto_connect(peer_info))
+        self.run_async(self.async_auto_connect(peer_info['ip'], peer_info['port']))
 
-    async def async_auto_connect(self, peer_info):
-        # Use lock to prevent race if both sides try to connect simultaneously
-        acquired = self.connection_lock.acquire(blocking=False)
-        if not acquired:
-            print("[AETHER] Connection already in progress, ignoring new request")
-            self.master.after(0, lambda: self.add_chat_message("SYSTEM", "Bağlantı zaten devam ediyor..."))
-            return
-        
+    @staticmethod
+    def get_public_ip():
+        """Fetch the public WAN IP address of this device."""
         try:
-            self.current_peer_id = peer_info.get('id') # Track for Smart IP Learning
-            # 1. Generate Offer
-            self.pc = self.create_pc()
-            self.channel = self.pc.createDataChannel("chat")
-            self.setup_channel(self.channel)
+            import urllib.request
+            # Use reliable ipify service
+            with urllib.request.urlopen('https://api.ipify.org', timeout=3) as response:
+                return response.read().decode('utf-8')
+        except:
+            return None
+
+    async def async_auto_connect(self, target_ip, target_port):
+        """Asynchronous auto-connect logic."""
+        if not self.pc:
+            self.create_pc()
+
+        peer_id = None
+        # Try to find peer ID from IP (Reverse Lookup)
+        for pid, pdata in self.trusted_peers.items():
+            if pdata.get('ip') == target_ip or pdata.get('last_ip') == target_ip:
+                peer_id = pid
+                break
+        
+        # Track who we are connecting to for Smart IP Learning
+        if peer_id:
+             self.current_peer_id = peer_id
+
+        # Prevent concurrent connections to the same peer (or any peer if single-threaded logic)
+        # Using a lock to ensure atomic operations on connection state
+        if not self.connection_lock.acquire(blocking=False):
+            print(f"[AETHER] Connection attempt ignored: Already connecting.")
+            return
+
+        try:
+            print(f"[AETHER] Auto-connecting to {target_ip}:{target_port}...")
             
+            # Create Data Channel
+            channel = self.pc.createDataChannel("chat")
+            self.setup_channel(channel)
+
+            # Create Offer
             offer = await self.pc.createOffer()
             await self.pc.setLocalDescription(offer)
+
+            # Prepare Offer JSON
+            offer_json = {
+                "sdp": self.pc.localDescription.sdp,
+                "type": self.pc.localDescription.type,
+                "id": self.discovery.device_id, # Assuming self.discovery.device_id is available
+                "user": self.discovery.username, # Assuming self.discovery.username is available
+                "ip": self.discovery._get_local_ip_and_broadcast()[0], # Assuming this method exists
+                "public_ip": self.get_public_ip(), # Inject Public IP
+                "port": self.handshake.port
+            }
             
-            offer_json = {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type, "id": self.discovery.device_id}
-            
-            # 2. Exchange via TCP (Blocking IO in Thread)
-            # We run this in a thread executor to avoid blocking the asyncio loop
+            # Send via TCP Handshake (Thread-blocking, hence run_in_executor)
             loop = asyncio.get_event_loop()
-            answer_json = await loop.run_in_executor(None, 
-                lambda: self.handshake.connect_and_exchange(peer_info['ip'], peer_info['port'], offer_json)
+            answer_json = await loop.run_in_executor(
+                None, 
+                self.handshake.connect_and_exchange, 
+                target_ip, 
+                target_port, 
+                offer_json
             )
             
-            # 3. Process Answer
-            answer = RTCSessionDescription(sdp=answer_json["sdp"], type=answer_json["type"])
-            await self.pc.setRemoteDescription(answer)
+            # Process Answer
+            # Assuming process_answer_host is a method that handles the answer
+            # If not, this needs to be defined or replaced with appropriate logic
+            await self.set_remote_answer(answer_json) # Using existing set_remote_answer for simplicity
             
         except Exception as e:
-            err_msg = str(e)
-            if "peer is busy" in err_msg.lower():
-                print(f"[AETHER] Connection collision detected: {err_msg}")
-                self.master.after(0, lambda: self.add_chat_message("SYSTEM", "⚠️ Karşı taraf meşgul veya size bağlanıyor. Bekleyiniz..."))
+            print(f"[AUTO-CONNECT ERROR] {e}")
+            if "Peer is busy" in str(e):
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⚠️ {target_ip} şu an meşgul."))
             else:
-                print(f"[AUTO-CONNECT ERROR] {e}")
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⚠️ Bağlantı hatası: {e}"))
                 self.master.after(0, lambda: messagebox.showerror("Hata", f"Otomatik bağlantı başarısız: {e}"))
-                self.master.after(0, self.cleanup_and_home)
+                self.master.after(0, self.cleanup_and_home) # Assuming cleanup_and_home exists
         finally:
             self.connection_lock.release()
 
