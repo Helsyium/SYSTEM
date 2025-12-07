@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Security](https://img.shields.io/badge/Security-Hardened%20v3.5-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-GPLv3-red)
 
 ---
 
