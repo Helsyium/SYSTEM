@@ -310,9 +310,13 @@ class AetherApp(ctk.CTkFrame):
                 # Smart IP Learning: Capture the ACTUAL IP used for connection
                 try:
                     # Get the selected candidate pair
-                    transport = pc.sctp.transport
-                    if transport.iceTransport:
-                        pair = transport.iceTransport.getSelectedCandidatePair()
+                    # pc.sctp.transport is RTCDtlsTransport
+                    dtls_transport = pc.sctp.transport
+                    # In aiortc, the underlying ICE transport is available via .transport property
+                    ice_transport = getattr(dtls_transport, "transport", None)
+                    
+                    if ice_transport:
+                        pair = ice_transport.getSelectedCandidatePair()
                         if pair and pair.remote:
                             real_ip = pair.remote.ip
                             print(f"[AETHER] Smart IP Learning: Connected via {real_ip}")
