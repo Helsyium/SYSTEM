@@ -145,6 +145,37 @@ class UPnPManager:
         except Exception as e:
             print(f"[UPnP] Descriptor Fetch Error: {e}")
 
+    def delete_port_mapping(self, external_port, protocol="TCP"):
+        """Deletes an existing port mapping."""
+        soap_body = (
+            '<?xml version="1.0"?>'
+            '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">'
+            '<s:Body>'
+            '<u:DeletePortMapping xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1">'
+            '<NewRemoteHost></NewRemoteHost>'
+            f'<NewExternalPort>{external_port}</NewExternalPort>'
+            f'<NewProtocol>{protocol}</NewProtocol>'
+            '</u:DeletePortMapping>'
+            '</s:Body>'
+            '</s:Envelope>'
+        )
+
+        headers = {
+            'SOAPAction': '"urn:schemas-upnp-org:service:WANIPConnection:1#DeletePortMapping"',
+            'Content-Type': 'text/xml; charset="utf-8"',
+            'Content-Length': str(len(soap_body))
+        }
+
+        try:
+            req = urllib.request.Request(self.service_url, data=soap_body.encode(), headers=headers)
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    print(f"[UPnP] Deleted old mapping for {protocol}:{external_port}")
+                    return True
+        except Exception:
+            pass # It's fine if deletion fails (maybe it didn't exist)
+        return False
+
     def add_port_mapping(self, external_port, internal_port, protocol="TCP", lease_duration=0, description="Aether P2P"):
         if not self.service_url or not self.local_ip:
             print("[UPnP] Cannot add mapping: Service or Local IP not found.")
@@ -184,15 +215,35 @@ class UPnPManager:
         except urllib.error.HTTPError as e:
             # Read detailed SOAP Fault
             error_content = e.read().decode()
+            
+            # 1. Handle Conflict (718) or General Failure (500) that might be a conflict
+            if "718" in error_content or "Conflict" in error_content:
+                print(f"[UPnP] Conflict detected (Port {external_port} in use). Attempting to delete and retry...")
+                self.delete_port_mapping(external_port, protocol)
+                # Helper to prevent infinite recursion, try simple add again
+                return self._add_port_mapping_simple(soap_body, headers)
+            
             print(f"[UPnP] AddPortMapping Failed (HTTP {e.code}): {error_content}")
             
-            # Simple Fallback: Try without LeaseDuration (some old routers hate it)
+            # 2. Fallback: Try without LeaseDuration (some old routers hate it)
             if "LeaseDuration" in error_content or e.code == 500:
                  return self._add_port_mapping_fallback(external_port, internal_port, protocol, description)
                  
         except Exception as e:
             print(f"[UPnP] AddPortMapping Failed: {e}")
             
+        return False
+
+    def _add_port_mapping_simple(self, soap_body, headers):
+        """Retry logic helper."""
+        try:
+             req = urllib.request.Request(self.service_url, data=soap_body.encode(), headers=headers)
+             with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                     print(f"[UPnP] Retry Success!")
+                     return True
+        except Exception as e:
+             print(f"[UPnP] Retry Failed: {e}")
         return False
 
     def _add_port_mapping_fallback(self, external_port, internal_port, protocol, description):

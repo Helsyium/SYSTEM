@@ -14,6 +14,7 @@ import os
 
 # Configuration
 BROADCAST_IP = "255.255.255.255"
+MULTICAST_GROUP = "239.1.1.1" # Multicast Address
 DISCOVERY_PORT = 50005
 BEACON_INTERVAL = 2.0  # Seconds
 SECRET_KEY = b"AETHER_SECURE_V1" # Shared secret for LAN security
@@ -50,6 +51,15 @@ class NetworkDiscovery:
                 self.sock_listen.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             except:
                 pass
+        
+        # Multicast specific setup
+        try:
+            mreq = socket.inet_aton(MULTICAST_GROUP) + socket.inet_aton("0.0.0.0")
+            self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+            # Disable loopback to prevent seeing self (optional but good)
+            self.sock_listen.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
+        except Exception as e:
+            print(f"[DISCOVERY] Multicast setup warning: {e}")
 
         # Threads
         self.thread_broadcast = None
@@ -150,7 +160,11 @@ class NetworkDiscovery:
                 self.sock_broadcast.sendto(data, (broadcast_target, DISCOVERY_PORT))
                 
                 # Also send to General Broadcast (Fallback)
+                # Also send to General Broadcast (Fallback)
                 self.sock_broadcast.sendto(data, ("255.255.255.255", DISCOVERY_PORT))
+                
+                # ALSO Send to Multicast Group (Robustness)
+                self.sock_broadcast.sendto(data, (MULTICAST_GROUP, DISCOVERY_PORT))
                 
             except Exception as e:
                 # print(f"[DISCOVERY] Broadcast error: {e}")
