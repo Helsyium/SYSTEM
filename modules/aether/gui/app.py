@@ -755,14 +755,14 @@ class AetherApp(ctk.CTkFrame):
             self.channel.send(json.dumps(meta))
             
             # 3. Send Chunks
-            # We iterate directly. Since chunks are small (16KB), the blocking time per chunk is negligible.
-            # We yield to the event loop (await asyncio.sleep) to keep UI responsive.
-            
+            # Faster Loop: Yield only every 5 chunks to boost throughput
             gen = self.file_manager.read_chunks(filepath, meta['id'])
-            for chunk_msg in gen:
+            for i, chunk_msg in enumerate(gen):
                 self.channel.send(json.dumps(chunk_msg))
-                # Yield control to allow UI updates and other async events processing
-                await asyncio.sleep(0.005) 
+                
+                # Yield control every 5 chunks (approx every 320KB) to keep UI responsive without killing speed
+                if i % 5 == 0:
+                    await asyncio.sleep(0) 
                 
         except Exception as e:
             err_msg = str(e)

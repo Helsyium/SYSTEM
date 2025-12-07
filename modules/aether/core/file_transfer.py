@@ -14,7 +14,7 @@ class FileTransferManager:
     - Receiver: Reassembly, Validation, Safe storage.
     """
     
-    CHUNK_SIZE = 16 * 1024 # 16KB chunks (Safe for WebRTC DataChannel)
+    CHUNK_SIZE = 64 * 1024 # Increased to 64KB for better throughput
     DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads", "AetherReceived")
 
     def __init__(self, on_progress: Callable[[str, float, str], None], on_complete: Callable[[str, str], None]):
