@@ -2,8 +2,17 @@
 TITLE SYSTEM HUB
 CD /D "%~dp0"
 
+:: Check for Administrator privileges and re-run if needed
+>nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
+IF '%errorlevel%' NEQ '0' (
+    ECHO [INFO] Requesting Administrator privileges...
+    ECHO [INFO] Please click 'Yes' on the UAC prompt.
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    EXIT /B
+)
+
 ECHO ===================================================
-ECHO   SYSTEM HUB - LAUNCHER
+ECHO   SYSTEM HUB - LAUNCHER (ADMIN MODE)
 ECHO ===================================================
 ECHO.
 
@@ -52,19 +61,7 @@ IF %ERRORLEVEL% NEQ 0 (
 
 :: 4. Uygulamayi Baslat (Direkt Venv Python ile)
 ECHO.
-ECHO [BILGI] Uygulama:: Firewall Configuration for Aether P2P
-echo [INFO] Configuring Windows Firewall for Aether P2P (Ports 54000-54010)...
-netsh advfirewall firewall show rule name="Aether P2P" >nul
-if %errorlevel% neq 0 (
-    powershell -Command "Start-Process netsh -ArgumentList 'advfirewall firewall add rule name=""Aether P2P"" dir=in action=allow protocol=TCP localport=54000-54010' -Verb RunAs"
-    echo [SUCCESS] Firewall rule added!
-) else (
-    echo [INFO] Firewall rule already exists.
-)
-
-:: Run the System
-echo.
-echo [INFO] Starting SYSTEM...
+ECHO [BILGI] Uygulama baslatiliyor...
 venv\Scripts\python.exe system/main.py
 
 IF %ERRORLEVEL% NEQ 0 (
