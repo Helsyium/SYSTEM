@@ -1,6 +1,6 @@
-# SYSTEM HUB - Secure Digital Vault & File Sharding Engine
+# SYSTEM HUB - Secure Digital Vault, File Sharding & P2P Mesh Network
 
-**SYSTEM HUB** is an advanced, modular security platform designed for uncompromising personal data protection. It integrates **ChaCha20-Poly1305 (IETF)** encryption and innovative **cryptographic file sharding** technologies through a modern, responsive interface.
+**SYSTEM HUB** is an advanced, modular security platform designed for uncompromising personal data protection and secure communication. It integrates **ChaCha20-Poly1305 (IETF)** encryption, innovative **cryptographic file sharding**, and **serverless P2P mesh networking** through a modern, responsive interface.
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Security](https://img.shields.io/badge/Security-Hardened%20v3.5-blue)
