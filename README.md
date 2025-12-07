@@ -52,7 +52,14 @@ A decentralized, serverless communication module designed for secure, censorship
         - **🌍 Different WiFi (WAN):** Manual "Out-of-Band" signaling (Copy-Paste Offer/Answer) for connecting devices across the internet without central servers.
     - **Serverless & Private:** No central signaling server, no database, no metadata retention.
     - **NAT Traversal:** STUN support for connectivity behind firewalls.
-    - **Cross-Platform:** Seamless communication between macOS and Windows.
+    - **Secure P2P File Sharing (New v3.5):**
+        - **⚡ Turbo Logic:** Optimized async loop with 64KB chunking for high-speed transfers.
+        - **🔒 Integrity Verified:** Automatic **SHA-256 Hash Verification** for every file to prevent corruption or tampering.
+        - **🛡️ Secure Isolation:** Files are automatically sandboxed to `~/Downloads/AetherReceived`.
+    - **Advanced Security:**
+        - **UDP Replay Protection:** Timestamp & Nonce validation to prevent replay attacks on LAN discovery.
+        - **HMAC Signatures:** All discovery beacons are cryptographically signed to prevent spoofing.
+    - **Cross-Platform:** Seamless communication between macOS and Windows (IPv4/Multicast logic optimized).
     - **Non-Intrusive:** Works without requiring aggressive administrator privileges or complex firewall scripts.
 
 ---
