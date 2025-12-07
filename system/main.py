@@ -25,6 +25,20 @@ def configure_firewall():
 
     try:
         import subprocess
+        # 0. AUTO-FIX: Switch Network Profile to Private (Silent)
+        # This solves the "Public Network blocks everything" issue
+        subprocess.run(
+            ["powershell", "-Command", 
+             "Set-NetConnectionProfile -InterfaceAlias 'Wi-Fi' -NetworkCategory Private -ErrorAction SilentlyContinue"], 
+            capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+        )
+        # Also try for Ethernet just in case
+        subprocess.run(
+            ["powershell", "-Command", 
+             "Set-NetConnectionProfile -InterfaceAlias 'Ethernet' -NetworkCategory Private -ErrorAction SilentlyContinue"], 
+            capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+        )
+
         # 1. Allow Port Range (TCP/UDP 54000-54010)
         # We suppress output to keep console clean, errors are printed
         subprocess.run(
@@ -40,15 +54,27 @@ def configure_firewall():
             capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
         )
         
-        # 2. Allow Application Executable
+        # 2. Allow Application Executable (The Smart Fix)
+        # This bypasses Public/Private restrictions for this specific app
         app_path = sys.executable
+        # If running from venv python, allow it. If frozen exe, allow it.
         subprocess.run(
             ["netsh", "advfirewall", "firewall", "add", "rule", 
              "name=Aether P2P App", "dir=in", "action=allow", 
              "program=" + app_path, "enable=yes"], 
             capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
         )
-        print("[SYSTEM] Windows Firewall rules configured successfully.")
+        
+        # 3. Allow Python for Development (Optional but helpful)
+        if "python" in app_path.lower():
+             subprocess.run(
+                ["netsh", "advfirewall", "firewall", "add", "rule", 
+                 "name=Python Interpreter", "dir=in", "action=allow", 
+                 "program=" + app_path, "enable=yes"], 
+                capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+            )
+
+        print("[SYSTEM] Windows Network & Firewall configured successfully.")
     except Exception as e:
         print(f"[SYSTEM] Firewall configuration warning: {e}")
 
