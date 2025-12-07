@@ -82,8 +82,14 @@ class HandshakeManager:
         try:
             print(f"[HANDSHAKE] Connecting to {ip}:{port}...")
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(5)
-            s.connect((ip, port))
+            s.settimeout(10)  # Increased from 5s to 10s for slower networks/firewalls
+            
+            try:
+                s.connect((ip, port))
+            except socket.timeout:
+                raise Exception(f"Connection timed out. Windows Firewall might be blocking port {port}. Please check firewall settings.")
+            except ConnectionRefusedError:
+                raise Exception(f"Connection refused. Peer might not be listening on port {port}.")
             
             # 1. Send Offer
             payload = json.dumps(offer_json).encode('utf-8')
@@ -91,8 +97,9 @@ class HandshakeManager:
             s.send(payload)
             
             # 2. Receive Answer
+            s.settimeout(15)  # Give more time for answer generation (WebRTC can be slow)
             header = s.recv(4)
-            if not header: raise ValueError("No response from peer")
+            if not header: raise ValueError("No response from peer (empty header)")
             length = int.from_bytes(header, 'big')
             
             data = b""
