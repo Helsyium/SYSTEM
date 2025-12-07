@@ -315,7 +315,7 @@ class AetherApp(ctk.CTkFrame):
                     # In aiortc, the underlying ICE transport is available via .transport property
                     ice_transport = getattr(dtls_transport, "transport", None)
                     
-                    if ice_transport:
+                    if ice_transport and hasattr(ice_transport, 'getSelectedCandidatePair'):
                         pair = ice_transport.getSelectedCandidatePair()
                         if pair and pair.remote:
                             real_ip = pair.remote.ip
