@@ -30,6 +30,23 @@ class AetherApp(ctk.CTkFrame):
         self.thread = threading.Thread(target=self.start_loop, daemon=True)
         self.thread.start()
 
+        # --- AETHER AUTOMATION MODULES ---
+        from modules.aether.core.discovery import NetworkDiscovery
+        from modules.aether.core.handshake import HandshakeManager
+        import platform # For hostname defaults
+
+        # 1. Start Handshake Server (TCP) - Listens for incoming Offers
+        self.handshake = HandshakeManager(callback_on_offer=self.handle_incoming_offer_auto)
+        
+        # 2. Start Discovery (UDP) - Broadcasts our TCP Port
+        my_hostname = platform.node()
+        self.discovery = NetworkDiscovery(username=my_hostname, tcp_port=self.handshake.port)
+        self.discovery.on_peer_found = self.on_peer_found_callback
+        self.discovery.start()
+        
+        # Store peers locally for UI mapping
+        self.known_peers = {} # {display_string: peer_data}
+
         # GUI Setup
         self.setup_ui()
 
@@ -63,20 +80,35 @@ class AetherApp(ctk.CTkFrame):
                                       fg_color=THEME["colors"]["accent"], text_color="black", height=50, font=("Roboto", 14, "bold"))
         self.btn_host.grid(row=0, column=0, padx=10, sticky="ew")
 
-        self.btn_join = ctk.CTkButton(self.frame_modes, text="BAĞLAN (JOIN)", command=self.show_join_mode,
+        self.btn_join = ctk.CTkButton(self.frame_modes, text="MANUEL BAĞLAN (JOIN)", command=self.show_join_mode,
                                       fg_color=THEME["colors"]["bg_card_hover"], border_width=1, border_color=THEME["colors"]["border"],
                                       height=50, font=("Roboto", 14, "bold"))
         self.btn_join.grid(row=0, column=1, padx=10, sticky="ew")
 
-        # --- SIGNALING AREA (Hidden by default) ---
-        self.frame_signaling = ctk.CTkFrame(self.main_container)
-        self.frame_signaling.grid(row=2, column=0, sticky="nsew", pady=20)
-        self.frame_signaling.grid_columnconfigure(0, weight=1)
-        self.frame_signaling.grid_remove() # Hide initially
+        # --- AUTOMATIC DISCOVERY UI ---
+        self.frame_discovery = ctk.CTkFrame(self.main_container, fg_color=THEME["colors"]["bg_card"])
+        self.frame_discovery.grid(row=2, column=0, sticky="nsew", pady=20)
+        self.frame_discovery.grid_columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(self.frame_discovery, text="YAKINDAKİ CİHAZLAR (AYNI WI-FI)", font=("Roboto", 12, "bold"), text_color="gray").pack(pady=(10, 5), anchor="w", padx=10)
+        
+        self.scroll_peers = ctk.CTkScrollableFrame(self.frame_discovery, height=150, fg_color="transparent")
+        self.scroll_peers.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Placeholder or empty list initially
+        self.lbl_no_peers = ctk.CTkLabel(self.scroll_peers, text="Taranıyor...", text_color="gray")
+        self.lbl_no_peers.pack(pady=20)
 
-        # --- CHAT AREA (Hidden by default) ---
+        # We will reuse frame_signaling for Manual Mode only, but shifted row index
+        self.frame_signaling = ctk.CTkFrame(self.main_container)
+        self.frame_signaling.grid(row=3, column=0, sticky="nsew", pady=20)
+        self.frame_signaling.grid_columnconfigure(0, weight=1)
+        self.frame_signaling.grid_remove() 
+
+        # --- CHAT AREA ---
         self.frame_chat = ctk.CTkFrame(self.main_container)
-        self.frame_chat.grid(row=3, column=0, sticky="nsew", pady=10)
+        self.frame_chat.grid(row=4, column=0, sticky="nsew", pady=10)
+
         self.frame_chat.grid_columnconfigure(0, weight=1)
         self.frame_chat.grid_rowconfigure(0, weight=1)
         self.frame_chat.grid_remove()
@@ -301,7 +333,110 @@ class AetherApp(ctk.CTkFrame):
         self.txt_chat_history.configure(state="disabled")
         self.txt_chat_history.see("end")
 
+    # --- AUTOMATION LOGIC ---
+    def on_peer_found_callback(self, peer_info):
+        """Called by discovery thread when new peer is found."""
+        self.master.after(0, lambda: self.update_peer_list(peer_info))
+
+    def update_peer_list(self, peer_info):
+        if self.lbl_no_peers:
+            self.lbl_no_peers.pack_forget()
+            self.lbl_no_peers = None
+            
+        display_name = f"{peer_info['user']} ({peer_info['ip']})"
+        if display_name in self.known_peers:
+            return
+            
+        self.known_peers[display_name] = peer_info
+        
+        btn = ctk.CTkButton(self.scroll_peers, text=f"🔗 BAĞLAN: {display_name}", 
+                            command=lambda: self.start_auto_connection(peer_info),
+                            fg_color=THEME["colors"]["accent"], text_color="black")
+        btn.pack(fill="x", pady=2, padx=5)
+
+    def start_auto_connection(self, peer_info):
+        """User clicked 'Connect' on a peer."""
+        self.frame_discovery.grid_remove()
+        self.frame_modes.grid_remove()
+        self.frame_chat.grid() # Prepare UI
+        self.add_chat_message("SYSTEM", f"Bağlanılıyor: {peer_info['user']}...")
+        
+        # Async: Generate Offer -> Send via TCP -> Receive Answer -> Set Remote
+        self.run_async(self.async_auto_connect(peer_info))
+
+    async def async_auto_connect(self, peer_info):
+        try:
+            # 1. Generate Offer
+            self.pc = self.create_pc()
+            self.channel = self.pc.createDataChannel("chat")
+            self.setup_channel(self.channel)
+            
+            offer = await self.pc.createOffer()
+            await self.pc.setLocalDescription(offer)
+            
+            offer_json = {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}
+            
+            # 2. Exchange via TCP (Blocking IO in Thread)
+            # We run this in a thread executor to avoid blocking the asyncio loop
+            loop = asyncio.get_event_loop()
+            answer_json = await loop.run_in_executor(None, 
+                lambda: self.handshake.connect_and_exchange(peer_info['ip'], peer_info['port'], offer_json)
+            )
+            
+            # 3. Process Answer
+            answer = RTCSessionDescription(sdp=answer_json["sdp"], type=answer_json["type"])
+            await self.pc.setRemoteDescription(answer)
+            
+            self.master.after(0, lambda: self.lbl_title.configure(text="BAĞLANDI (OTO) 🚀", text_color=THEME["colors"]["success"]))
+            
+        except Exception as e:
+            print(f"[AUTO-CONNECT ERROR] {e}")
+            self.master.after(0, lambda: messagebox.showerror("Hata", f"Otomatik bağlantı başarısız: {e}"))
+            self.master.after(0, self.cleanup)
+
+    def handle_incoming_offer_auto(self, offer_json):
+        """Called by Handshake Server Thread when someone connects to us."""
+        print("[AETHER AUTO] Incoming connection request received!")
+        
+        # We need a way to pass the result back to the TCP thread.
+        # But we need to run asyncio tasks to generate answer.
+        # Solution: Run asyncio.run_coroutine_threadsafe and wait for result.
+        
+        future = asyncio.run_coroutine_threadsafe(self.async_handle_incoming_offer(offer_json), self.loop)
+        return future.result() # Blocks TCP thread until Answer is ready
+
+    async def async_handle_incoming_offer(self, offer_json):
+        # Update UI first
+        self.master.after(0, lambda: self.prepare_ui_for_incoming_auto())
+        
+        self.pc = self.create_pc()
+        
+        @self.pc.on("datachannel")
+        def on_datachannel(channel):
+            self.channel = channel
+            self.setup_channel(channel)
+            
+        offer = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
+        await self.pc.setRemoteDescription(offer)
+        
+        answer = await self.pc.createAnswer()
+        await self.pc.setLocalDescription(answer)
+        
+        return {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}
+
+    def prepare_ui_for_incoming_auto(self):
+        self.frame_modes.grid_remove()
+        self.frame_discovery.grid_remove()
+        self.frame_chat.grid()
+        self.lbl_title.configure(text="GELEN BAĞLANTI KABUL EDİLDİ 🚀", text_color=THEME["colors"]["success"])
+        self.add_chat_message("SYSTEM", "Otomatik bağlantı isteği alındı...")
+
     def cleanup(self):
         if self.pc:
             self.run_async(self.pc.close())
+        try:
+            if hasattr(self, 'discovery'): self.discovery.stop()
+            if hasattr(self, 'handshake'): self.handshake.stop()
+        except:
+            pass
         self.loop.stop()
