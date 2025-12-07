@@ -40,15 +40,49 @@ class AetherApp(ctk.CTkFrame):
         
         # 2. Start Discovery (UDP) - Broadcasts our TCP Port
         my_hostname = platform.node()
-        self.discovery = NetworkDiscovery(username=my_hostname, tcp_port=self.handshake.port)
+        # Ensure we pass a storage path for identity persistence
+        from modules.vault.core.file_utils import FileUtils # Re-use if possible or just use cwd
+        # Simply use the current working directory for now or a specific modules/aether/data dir
+        import os
+        aether_data_dir = os.path.join(os.getcwd(), "modules", "aether", "data")
+        os.makedirs(aether_data_dir, exist_ok=True)
+
+        self.discovery = NetworkDiscovery(username=my_hostname, tcp_port=self.handshake.port, storage_dir=aether_data_dir)
         self.discovery.on_peer_found = self.on_peer_found_callback
         self.discovery.start()
         
+        # Load Trusted Peers
+        self.trusted_peers_file = os.path.join(aether_data_dir, "trusted_peers.json")
+        self.trusted_peers = self.load_trusted_peers()
+
         # Store peers locally for UI mapping
         self.known_peers = {} # {display_string: peer_data}
 
         # GUI Setup
         self.setup_ui()
+
+    def load_trusted_peers(self):
+        if os.path.exists(self.trusted_peers_file):
+            try:
+                with open(self.trusted_peers_file, "r") as f:
+                    return json.load(f)
+            except:
+                pass
+        return {}
+
+    def save_trusted_peer(self, peer_data):
+        pid = peer_data["id"]
+        self.trusted_peers[pid] = {
+            "user": peer_data["user"],
+            "last_ip": peer_data["ip"],
+            "trusted": True
+        }
+        try:
+            with open(self.trusted_peers_file, "w") as f:
+                json.dump(self.trusted_peers, f, indent=4)
+        except Exception as e:
+            print(f"Error saving trusted peers: {e}")
+
 
     def start_loop(self):
         asyncio.set_event_loop(self.loop)
@@ -349,9 +383,15 @@ class AetherApp(ctk.CTkFrame):
             
         self.known_peers[display_name] = peer_info
         
-        btn = ctk.CTkButton(self.scroll_peers, text=f"🔗 BAĞLAN: {display_name}", 
+        pid = peer_info.get("id")
+        is_trusted = pid in self.trusted_peers and self.trusted_peers[pid].get("trusted", False)
+        
+        btn_text = f"✨ BAĞLAN (GÜVENİLİR): {display_name}" if is_trusted else f"🔗 BAĞLAN: {display_name}"
+        btn_color = THEME["colors"]["success"] if is_trusted else THEME["colors"]["accent"]
+        
+        btn = ctk.CTkButton(self.scroll_peers, text=btn_text, 
                             command=lambda: self.start_auto_connection(peer_info),
-                            fg_color=THEME["colors"]["accent"], text_color="black")
+                            fg_color=btn_color, text_color="black")
         btn.pack(fill="x", pady=2, padx=5)
 
     def start_auto_connection(self, peer_info):
@@ -359,7 +399,7 @@ class AetherApp(ctk.CTkFrame):
         self.frame_discovery.grid_remove()
         self.frame_modes.grid_remove()
         self.frame_chat.grid() # Prepare UI
-        self.add_chat_message("SYSTEM", f"Bağlanılıyor: {peer_info['user']}...")
+        self.add_chat_message("SYSTEM", f"Bağlanılıyor: {peer_info['user']} ({peer_info['ip']})...")
         
         # Async: Generate Offer -> Send via TCP -> Receive Answer -> Set Remote
         self.run_async(self.async_auto_connect(peer_info))
@@ -374,7 +414,7 @@ class AetherApp(ctk.CTkFrame):
             offer = await self.pc.createOffer()
             await self.pc.setLocalDescription(offer)
             
-            offer_json = {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}
+            offer_json = {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type, "id": self.discovery.device_id}
             
             # 2. Exchange via TCP (Blocking IO in Thread)
             # We run this in a thread executor to avoid blocking the asyncio loop
@@ -387,6 +427,8 @@ class AetherApp(ctk.CTkFrame):
             answer = RTCSessionDescription(sdp=answer_json["sdp"], type=answer_json["type"])
             await self.pc.setRemoteDescription(answer)
             
+            # Save as Trusted if successful
+            self.save_trusted_peer(peer_info)
             self.master.after(0, lambda: self.lbl_title.configure(text="BAĞLANDI (OTO) 🚀", text_color=THEME["colors"]["success"]))
             
         except Exception as e:
@@ -398,9 +440,11 @@ class AetherApp(ctk.CTkFrame):
         """Called by Handshake Server Thread when someone connects to us."""
         print("[AETHER AUTO] Incoming connection request received!")
         
-        # We need a way to pass the result back to the TCP thread.
-        # But we need to run asyncio tasks to generate answer.
-        # Solution: Run asyncio.run_coroutine_threadsafe and wait for result.
+        # Check trust?
+        peer_id = offer_json.get("id")
+        if peer_id and peer_id in self.trusted_peers:
+            print(f"[AETHER AUTO] Trusted Peer Connecting: {self.trusted_peers[peer_id]['user']}")
+            # We could auto-accept here without any prompt if we wanted 'silent accept'
         
         future = asyncio.run_coroutine_threadsafe(self.async_handle_incoming_offer(offer_json), self.loop)
         return future.result() # Blocks TCP thread until Answer is ready
@@ -422,7 +466,7 @@ class AetherApp(ctk.CTkFrame):
         answer = await self.pc.createAnswer()
         await self.pc.setLocalDescription(answer)
         
-        return {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}
+        return {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type, "id": self.discovery.device_id}
 
     def prepare_ui_for_incoming_auto(self):
         self.frame_modes.grid_remove()

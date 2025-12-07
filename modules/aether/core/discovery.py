@@ -6,6 +6,8 @@ import uuid
 import logging
 from typing import Callable, Dict
 
+import os
+
 # Configuration
 BROADCAST_IP = "255.255.255.255"
 DISCOVERY_PORT = 50005
@@ -18,8 +20,9 @@ class NetworkDiscovery:
     - Listener: Listens for beacons from other peers.
     """
     
-    def __init__(self, username: str, tcp_port: int):
-        self.device_id = str(uuid.uuid4())
+    def __init__(self, username: str, tcp_port: int, storage_dir: str = None):
+        self.storage_dir = storage_dir or os.getcwd()
+        self.device_id = self._load_or_create_device_id()
         self.username = username
         self.tcp_port = tcp_port # Port for Handshake
         self.running = False
@@ -37,6 +40,25 @@ class NetworkDiscovery:
         # Threads
         self.thread_broadcast = None
         self.thread_listen = None
+
+    def _load_or_create_device_id(self):
+        """Load persistent device ID or create new one."""
+        id_file = os.path.join(self.storage_dir, "aether_identity.json")
+        if os.path.exists(id_file):
+            try:
+                with open(id_file, "r") as f:
+                    data = json.load(f)
+                    return data.get("device_id", str(uuid.uuid4()))
+            except:
+                pass
+        
+        new_id = str(uuid.uuid4())
+        try:
+            with open(id_file, "w") as f:
+                json.dump({"device_id": new_id}, f)
+        except:
+            pass
+        return new_id
         
     def start(self):
         self.running = True
@@ -86,16 +108,23 @@ class NetworkDiscovery:
         while self.running:
             try:
                 data, addr = self.sock_listen.recvfrom(1024)
-                ip = addr[0]
+                sender_ip = addr[0]
                 
-                # Ignore own packets (if loopback) - logic handled by ID check
-                msg = json.loads(data.decode('utf-8'))
-                
+                # Decode
+                try:
+                    msg = json.loads(data.decode('utf-8'))
+                except:
+                    continue
+
+                # 1. Self Check by ID (Robust)
                 if msg.get("id") == self.device_id:
-                    continue # It's me
+                    continue 
+
+                # 2. Self Check by IP (Optional backup, but ID is better)
+                # We skip this because we might rely on ID if NAT makes IPs weird.
                 
                 # Handle Peer Found
-                self._handle_peer(ip, msg)
+                self._handle_peer(sender_ip, msg)
                 
             except Exception as e:
                 if self.running:
