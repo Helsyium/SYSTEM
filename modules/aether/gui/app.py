@@ -513,25 +513,70 @@ class AetherApp(ctk.CTkFrame):
             "ip": local_ip,
             "port": self.handshake.port # Save listening port for future reconnections
         })
-        self.master.after(0, lambda: self.txt_offer.insert("0.0", offer_json))
+        
+        # In the Lambda, use show_code
+        self.master.after(0, lambda: self.show_code(offer_json, "ADIM 1: Bu Kodu Kopyala ve Karşı Tarafa Gönder"))
 
-    def process_answer_host(self):
-        answer_str = self.txt_answer_input.get("0.0", "end").strip()
-        if not answer_str:
-            messagebox.showerror("Hata", "Lütfen karşı taraftan gelen cevabı yapıştırın.")
+    def process_offer_and_generate_answer(self):
+        """Smart method to handle both joining (Offer) and completing connection (Answer)."""
+        code_b64 = self.entry_join_code.get("0.0", "end").strip()
+        if not code_b64:
+            messagebox.showwarning("Uyarı", "Lütfen bir kod yapıştırın!")
             return
 
+        self.run_async(self.async_process_pasted_code(code_b64))
+
+    async def async_process_pasted_code(self, code_str):
         try:
-            answer_data = json.loads(answer_str)
-            self.run_async(self.set_remote_answer(answer_data))
+            # 1. Parse JSON
+            data = json.loads(code_str)
+            msg_type = data.get("type")
             
-            # Save as trusted peer if info exists
-            if "id" in answer_data:
-                self.save_trusted_peer(answer_data)
-                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⭐ {answer_data.get('user', 'Peer')} güvenilir cihazlara eklendi!"))
+            if msg_type == "offer":
+                # === JOINER FLOW ===
+                # We received an OFFER, so we must generate an ANSWER
+                self.pc = self.create_pc()
                 
+                @self.pc.on("datachannel")
+                def on_datachannel(channel):
+                    self.setup_channel(channel)
+                
+                rd = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
+                await self.pc.setRemoteDescription(rd)
+                
+                answer = await self.pc.createAnswer()
+                await self.pc.setLocalDescription(answer)
+                
+                local_ip = self.discovery._get_local_ip_and_broadcast()[0] if hasattr(self, 'discovery') else "0.0.0.0"
+                
+                answer_json = json.dumps({
+                    "sdp": self.pc.localDescription.sdp,
+                    "type": self.pc.localDescription.type,
+                    "user": self.discovery.username if hasattr(self, 'discovery') else "Guest",
+                    "ip": local_ip
+                })
+                
+                self.master.after(0, lambda: self.show_code(answer_json, "ADIM 2: Bu Cevap Kodunu Host'a Gönder"))
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"{data.get('user', 'Host')} bulundu. Cevap kodu üretildi."))
+                
+            elif msg_type == "answer":
+                # === HOST FLOW ===
+                # We received an ANSWER, so we complete the connection
+                if not self.pc:
+                    self.master.after(0, lambda: messagebox.showerror("Hata", "Önce 'Kod Oluştur' diyerek Host olmalısınız!"))
+                    return
+
+                rd = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
+                await self.pc.setRemoteDescription(rd)
+                
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"{data.get('user', 'Misafir')} bağlandı! Sohbet başlayabilir. 🟢"))
+                
+            else:
+                self.master.after(0, lambda: messagebox.showerror("Hata", "Bilinmeyen kod formatı."))
+
         except Exception as e:
-            messagebox.showerror("Hata", f"Geçersiz kod: {e}")
+            print(f"Code Process Error: {e}")
+            self.master.after(0, lambda: messagebox.showerror("Hata", f"Geçersiz Kod: {e}"))
 
     async def set_remote_answer(self, data):
         answer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
