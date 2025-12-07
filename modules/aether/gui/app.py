@@ -575,8 +575,9 @@ class AetherApp(ctk.CTkFrame):
                 self.master.after(0, lambda: messagebox.showerror("Hata", "Bilinmeyen kod formatı."))
 
         except Exception as e:
-            print(f"Code Process Error: {e}")
-            self.master.after(0, lambda: messagebox.showerror("Hata", f"Geçersiz Kod: {e}"))
+            err_msg = str(e)
+            print(f"Code Process Error: {err_msg}")
+            self.master.after(0, lambda: messagebox.showerror("Hata", f"Geçersiz Kod: {err_msg}"))
 
     async def set_remote_answer(self, data):
         answer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
