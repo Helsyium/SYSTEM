@@ -25,6 +25,7 @@ class AetherApp(ctk.CTkFrame):
         self.pc = None
         self.channel = None
         self.is_running = True
+        self.connection_lock = threading.Lock()  # Prevent reconnection race conditions
         
         # Start AsyncIO Loop in a separate thread
         self.thread = threading.Thread(target=self.start_loop, daemon=True)
@@ -592,6 +593,13 @@ class AetherApp(ctk.CTkFrame):
         self.run_async(self.async_auto_connect(peer_info))
 
     async def async_auto_connect(self, peer_info):
+        # Use lock to prevent race if both sides try to connect simultaneously
+        acquired = self.connection_lock.acquire(blocking=False)
+        if not acquired:
+            print("[AETHER] Connection already in progress, ignoring new request")
+            self.master.after(0, lambda: self.add_chat_message("SYSTEM", "Bağlantı zaten devam ediyor..."))
+            return
+        
         try:
             # 1. Generate Offer
             self.pc = self.create_pc()
@@ -622,6 +630,8 @@ class AetherApp(ctk.CTkFrame):
             print(f"[AUTO-CONNECT ERROR] {e}")
             self.master.after(0, lambda: messagebox.showerror("Hata", f"Otomatik bağlantı başarısız: {e}"))
             self.master.after(0, self.cleanup_and_home)
+        finally:
+            self.connection_lock.release()
 
     def handle_incoming_offer_auto(self, offer_json):
         """Called by Handshake Server Thread when someone connects to us."""
@@ -637,23 +647,41 @@ class AetherApp(ctk.CTkFrame):
         return future.result() # Blocks TCP thread until Answer is ready
 
     async def async_handle_incoming_offer(self, offer_json):
-        # Update UI first
-        self.master.after(0, lambda: self.prepare_ui_for_incoming_auto())
+        # Use lock to prevent race condition if reconnecting
+        acquired = self.connection_lock.acquire(blocking=False)
+        if not acquired:
+            print("[AETHER] Ignoring incoming offer - connection already in progress")
+            return None
         
-        self.pc = self.create_pc()
-        
-        @self.pc.on("datachannel")
-        def on_datachannel(channel):
-            self.channel = channel
-            self.setup_channel(channel)
+        try:
+            # Update UI first
+            self.master.after(0, lambda: self.prepare_ui_for_incoming_auto())
             
-        offer = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
-        await self.pc.setRemoteDescription(offer)
-        
-        answer = await self.pc.createAnswer()
-        await self.pc.setLocalDescription(answer)
-        
-        return {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type, "id": self.discovery.device_id}
+            # Close old connection if exists
+            if self.pc:
+                print("[AETHER] Closing old connection before accepting new one")
+                try:
+                    await self.pc.close()
+                    await asyncio.sleep(0.3)
+                except:
+                    pass
+            
+            self.pc = self.create_pc()
+            
+            @self.pc.on("datachannel")
+            def on_datachannel(channel):
+                self.channel = channel
+                self.setup_channel(channel)
+                
+            offer = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
+            await self.pc.setRemoteDescription(offer)
+            
+            answer = await self.pc.createAnswer()
+            await self.pc.setLocalDescription(answer)
+            
+            return {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type, "id": self.discovery.device_id}
+        finally:
+            self.connection_lock.release()
 
     def prepare_ui_for_incoming_auto(self):
         try:
