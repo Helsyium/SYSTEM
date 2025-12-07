@@ -178,16 +178,29 @@ class AetherApp(ctk.CTkFrame):
         return pc
 
     def update_status(self, text):
+        def _update():
+            # Safe check for UI existence
+            if not self.winfo_exists(): return
+            
+            # Check if lbl_status exists
+            if hasattr(self, 'lbl_status') and self.lbl_status.winfo_exists():
+                color = "yellow"
+                if "connect" in text.lower():
+                    color = THEME["colors"]["success"]
+                elif "fail" in text.lower() or "close" in text.lower():
+                    color = THEME["colors"]["danger"]
+                elif "check" in text.lower():
+                    color = "orange"
+                self.lbl_status.configure(text=text, text_color=color)
+            else:
+                # Fallback to Title if we are in Auto-Mode (where lbl_status might not exist)
+                # But only for major events to avoid spamming title
+                print(f"[AETHER STATUS] {text}")
+                if "connect" in text.lower() and hasattr(self, 'lbl_title'):
+                     self.lbl_title.configure(text=f"AETHER: {text}", text_color=THEME["colors"]["success"])
+
         try:
-            color = "yellow"
-            if "connect" in text.lower():
-                color = THEME["colors"]["success"]
-            elif "fail" in text.lower() or "close" in text.lower():
-                color = THEME["colors"]["danger"]
-            elif "check" in text.lower():
-                color = "orange"
-                
-            self.master.after(0, lambda: self.lbl_status.configure(text=text, text_color=color))
+            self.master.after(0, _update)
         except:
             pass
 
@@ -362,10 +375,17 @@ class AetherApp(ctk.CTkFrame):
             self.add_chat_message("System", "Bağlantı hazır değil! 🔴")
 
     def add_chat_message(self, sender, msg):
-        self.txt_chat_history.configure(state="normal")
-        self.txt_chat_history.insert("end", f"[{sender}]: {msg}\n")
-        self.txt_chat_history.configure(state="disabled")
-        self.txt_chat_history.see("end")
+        def _append():
+            if not self.txt_chat_history.winfo_exists(): return
+            try:
+                self.txt_chat_history.configure(state="normal")
+                self.txt_chat_history.insert("end", f"[{sender}]: {msg}\n")
+                self.txt_chat_history.configure(state="disabled")
+                self.txt_chat_history.see("end")
+            except Exception as e:
+                print(f"[UI ERROR] Chat update failed: {e}")
+
+        self.master.after(0, _append)
 
     # --- AUTOMATION LOGIC ---
     def on_peer_found_callback(self, peer_info):
@@ -469,11 +489,14 @@ class AetherApp(ctk.CTkFrame):
         return {"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type, "id": self.discovery.device_id}
 
     def prepare_ui_for_incoming_auto(self):
-        self.frame_modes.grid_remove()
-        self.frame_discovery.grid_remove()
-        self.frame_chat.grid()
-        self.lbl_title.configure(text="GELEN BAĞLANTI KABUL EDİLDİ 🚀", text_color=THEME["colors"]["success"])
-        self.add_chat_message("SYSTEM", "Otomatik bağlantı isteği alındı...")
+        try:
+            self.frame_modes.grid_remove()
+            self.frame_discovery.grid_remove()
+            self.frame_chat.grid()
+            self.lbl_title.configure(text="GELEN BAĞLANTI KABUL EDİLDİ 🚀", text_color=THEME["colors"]["success"])
+            self.add_chat_message("SYSTEM", "Otomatik bağlantı isteği alındı...")
+        except Exception as e:
+             print(f"[UI ERROR] UI Transition failed: {e}")
 
     def cleanup(self):
         if self.pc:
