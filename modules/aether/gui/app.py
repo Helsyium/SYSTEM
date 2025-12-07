@@ -341,6 +341,7 @@ class AetherApp(ctk.CTkFrame):
                 "id": self.discovery.device_id,
                 "user": self.discovery.username,
                 "ip": local_ip,
+                "public_ip": self.get_public_ip(), # Inject Public IP
                 "port": self.handshake.port # Save listening port for future reconnections
             })
             
