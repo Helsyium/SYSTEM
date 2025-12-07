@@ -97,60 +97,93 @@ class AetherApp(ctk.CTkFrame):
         asyncio.run_coroutine_threadsafe(coro, self.loop)
 
     def setup_ui(self):
-        """Refactored UI with 3 Main Options."""
+        """Refactored UI with Hybrid Options."""
         self.main_container = ctk.CTkFrame(self.master, fg_color="transparent")
         self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
         # TITLE
-        self.lbl_title = ctk.CTkLabel(self.main_container, text="AETHER P2P (MANUEL MOD)", font=("Roboto", 24, "bold"))
+        self.lbl_title = ctk.CTkLabel(self.main_container, text="AETHER P2P (HİBRİT MOD)", font=("Roboto", 24, "bold"))
         self.lbl_title.pack(pady=(0, 20))
 
-        # Direct Chat & Manual Connect Panels
-        self.frame_split = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self.frame_split.pack(fill="both", expand=True)
-
-        self.frame_chat = ctk.CTkFrame(self.frame_split, fg_color="transparent")
-        self.frame_chat.pack(side="left", fill="both", expand=True, padx=10)
+        # --- PANELS ---
+        # 1. Home Menu
+        self.frame_home = ctk.CTkFrame(self.main_container, fg_color="transparent")
         
-        self.frame_manual = ctk.CTkFrame(self.frame_split, fg_color="transparent")
-        self.frame_manual.pack(side="right", fill="both", expand=True, padx=10)
-
-        # Build Panels
-        self.build_chat_panel()
+        # 2. Sub-Panels
+        self.frame_discovery = ctk.CTkFrame(self.main_container) # Same Wi-Fi
+        self.frame_manual = ctk.CTkFrame(self.main_container)    # Different Wi-Fi
+        self.frame_chat = ctk.CTkFrame(self.main_container)      # Chat
+        
+        # Build Navigation
+        self.build_home_menu()
+        self.build_discovery_panel()
         self.build_manual_panel()
+        self.build_chat_panel()
 
-    def build_chat_panel(self):
-        """Build the chat area."""
-        # Header
-        header = ctk.CTkFrame(self.frame_chat, height=50, fg_color="transparent")
-        header.pack(fill="x")
-        ctk.CTkLabel(header, text="💬 Sohbet", font=THEME["fonts"]["header"]).pack(side="left", padx=10)
+        # Show Home by default
+        self.show_home()
 
-        # Chat History
-        self.chat_history = ctk.CTkTextbox(self.frame_chat, state="disabled", wrap="word")
-        self.chat_history.pack(fill="both", expand=True, pady=10)
-
-        # Input Area
-        input_frame = ctk.CTkFrame(self.frame_chat, height=50, fg_color="transparent")
-        input_frame.pack(fill="x", pady=5)
+    def build_home_menu(self):
+        """Create the 2 main option buttons."""
+        # Option 1: Same Wi-Fi (Auto)
+        btn_wifi = ctk.CTkButton(self.frame_home, text="🏠 AYNI WI-FI (OTOMATİK)", 
+                                 command=self.show_discovery_panel,
+                                 height=80, font=("Roboto", 18, "bold"), fg_color=THEME["colors"]["accent"], text_color="black")
+        btn_wifi.pack(fill="x", pady=20)
         
-        self.entry_message = ctk.CTkEntry(input_frame, placeholder_text="Mesaj yaz...")
-        self.entry_message.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        self.entry_message.bind("<Return>", lambda e: self.send_message())
-
-        btn_send = ctk.CTkButton(input_frame, text="Gönder", command=self.send_message, width=100,
-                                 fg_color=THEME["colors"]["accent"], text_color=THEME["colors"]["accent_text"],
-                                 hover_color=THEME["colors"]["accent_hover"])
-        btn_send.pack(side="right")
+        # Option 2: Different Wi-Fi (Manual)
+        btn_manual = ctk.CTkButton(self.frame_home, text="🌍 FARKLI WI-FI (KOD İLE)", 
+                                   command=self.show_manual_panel,
+                                   height=80, font=("Roboto", 18, "bold"), fg_color=THEME["colors"]["bg_card"])
+        btn_manual.pack(fill="x", pady=20)
         
+    def show_home(self):
+        self.frame_discovery.pack_forget()
+        self.frame_manual.pack_forget()
+        self.frame_chat.pack_forget()
+        self.frame_home.pack(fill="both", expand=True)
+        self.lbl_title.configure(text="AETHER P2P AĞI", text_color="white")
+
+    def show_discovery_panel(self):
+        self.frame_home.pack_forget()
+        self.frame_manual.pack_forget()
+        self.frame_discovery.pack(fill="both", expand=True)
+        
+    def show_manual_panel(self):
+        self.frame_home.pack_forget()
+        self.frame_discovery.pack_forget()
+        self.frame_manual.pack(fill="both", expand=True)
+
+    def go_back(self):
+        """Back to Home."""
+        self.show_home()
+
+    def build_discovery_panel(self):
+        """Panel for Local Network Discovery."""
+        # Header with Back Button
+        header = ctk.CTkFrame(self.frame_discovery, fg_color="transparent")
+        header.pack(fill="x", pady=10)
+        ctk.CTkButton(header, text="←", width=30, command=self.go_back, fg_color="transparent", border_width=1).pack(side="left")
+        ctk.CTkLabel(header, text="YAKINDAKİ CİHAZLAR (LAN)", font=THEME["fonts"]["subheader"]).pack(side="left", padx=10)
+        
+        self.scroll_peers = ctk.CTkScrollableFrame(self.frame_discovery, fg_color="transparent")
+        self.scroll_peers.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        self.lbl_no_peers = ctk.CTkLabel(self.scroll_peers, text="Taranıyor... Lütfen bekleyin.", text_color="gray")
+        self.lbl_no_peers.pack(pady=20)
+
     def build_manual_panel(self):
         """Panel for Manual Host/Join (Traditional)."""
-        ctk.CTkLabel(self.frame_manual, text="🔗 Manuel Bağlantı", font=THEME["fonts"]["subheader"]).pack(pady=(0, 20))
+        # Header with Back Button
+        header = ctk.CTkFrame(self.frame_manual, fg_color="transparent")
+        header.pack(fill="x", pady=10)
+        ctk.CTkButton(header, text="←", width=30, command=self.go_back, fg_color="transparent", border_width=1).pack(side="left")
+        ctk.CTkLabel(header, text="MANUEL BAĞLANTI (WAN)", font=THEME["fonts"]["subheader"]).pack(side="left", padx=10)
         
         # HOST SECTION
         frame_host = ctk.CTkFrame(self.frame_manual, fg_color=THEME["colors"]["bg_card"])
         frame_host.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(frame_host, text="Bağlantı Başlat (Host)", font=("Roboto", 12, "bold")).pack(pady=5)
+        ctk.CTkLabel(frame_host, text="Bağlantı Başlat (Host) - Kod Oluştur", font=("Roboto", 12, "bold")).pack(pady=5)
         
         btn_host = ctk.CTkButton(frame_host, text="Kod Oluştur", command=self.generate_offer,
                                  fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"],
@@ -160,7 +193,7 @@ class AetherApp(ctk.CTkFrame):
         # JOIN SECTION
         frame_join = ctk.CTkFrame(self.frame_manual, fg_color=THEME["colors"]["bg_card"])
         frame_join.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(frame_join, text="Bağlan (Join)", font=("Roboto", 12, "bold")).pack(pady=5)
+        ctk.CTkLabel(frame_join, text="Bağlan (Join) - Kodu Yapıştır", font=("Roboto", 12, "bold")).pack(pady=5)
 
         self.entry_join_code = ctk.CTkTextbox(frame_join, height=100)
         self.entry_join_code.pack(fill="x", padx=10, pady=5)
@@ -176,36 +209,10 @@ class AetherApp(ctk.CTkFrame):
         
         self.text_code_display = ctk.CTkTextbox(self.frame_signaling, wrap="word")
         self.text_code_display.pack(fill="both", expand=True)
-        
-        ctk.CTkLabel(frame_join, text="veya", text_color="gray").pack()
-        
-        self.entry_join_code = ctk.CTkEntry(frame_join, placeholder_text="Karşı Tarafın IP Adresini Girin...", height=40)
-        self.entry_join_code.pack(fill="x", pady=10)
-        
-        btn_join = ctk.CTkButton(frame_join, text="Manuel Bağlan", 
-                               command=self.join_session_manual, width=200, height=40,
-                               fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"])
-        btn_join.pack()
 
     def join_session_manual(self):
-        """Handle manual IP connection."""
-        ip = self.entry_join_code.get().strip()
-        if not ip:
-            messagebox.showwarning("Uyarı", "Lütfen geçerli bir IP adresi girin.")
-            return
-            
-        # Try both port 54000 and the handshake port
-        port = 54000
-        if hasattr(self, 'handshake'):
-            port = self.handshake.port
-            
-        self.add_chat_message("SYSTEM", f"Manuel Bağlanılıyor: {ip}:{port}...")
-        self.run_async(self.async_auto_connect(ip, port))
-
-        # Signaling Area (Dynamic content for manual mode)
-        self.frame_signaling = ctk.CTkFrame(self.frame_manual)
-        self.frame_signaling.pack(fill="both", expand=True, pady=10)
-        self.frame_signaling.pack_forget() # Initially hidden until host/join click
+        # Deprecated: Kept for compatibility if called, but UI is now SDP based
+         pass
 
     def build_trusted_panel(self):
         """Panel for Trusted Devices."""
