@@ -210,6 +210,62 @@ class AetherApp(ctk.CTkFrame):
         self.text_code_display = ctk.CTkTextbox(self.frame_signaling, wrap="word")
         self.text_code_display.pack(fill="both", expand=True)
 
+    def process_offer_and_generate_answer(self):
+        """Process pasted offer code."""
+        code_b64 = self.entry_join_code.get("0.0", "end").strip()
+        if not code_b64: # or "..." in code_b64:
+             return
+
+        self.run_async(self.async_process_offer(code_b64))
+
+    async def async_process_offer(self, code_b64):
+        try:
+            # Handle potential JSON/Base64 differences based on what we decided earlier
+            # For simplicity, let's assume raw JSON for now as per previous logic, 
+            # OR try to detect if it's base64/json. 
+            # The previous 'Host' code generated a simple JSON list or dict.
+            
+            offer_json = json.loads(code_b64)
+
+            self.pc = self.create_pc()
+            
+            @self.pc.on("datachannel")
+            def on_datachannel(channel):
+                self.setup_channel(channel)
+            
+            rd = RTCSessionDescription(sdp=offer_json["sdp"], type=offer_json["type"])
+            await self.pc.setRemoteDescription(rd)
+            
+            answer = await self.pc.createAnswer()
+            await self.pc.setLocalDescription(answer)
+            
+            answer_json = {
+                "sdp": self.pc.localDescription.sdp,
+                "type": self.pc.localDescription.type,
+                "user": self.discovery.username if hasattr(self, 'discovery') else "User"
+            }
+            
+            ans_code = json.dumps(answer_json)
+            
+            self.master.after(0, lambda: self.show_code(ans_code, "Bu Cevap Kodunu Host'a Gönderin"))
+            self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"{offer_json.get('user', 'Peer')} bağlanıyor..."))
+
+        except Exception as e:
+            print(f"Process Offer Error: {e}")
+            self.master.after(0, lambda: messagebox.showerror("Hata", f"Geçersiz Bağlantı Kodu: {e}"))
+
+    def show_code(self, code, title):
+        """Display generated code in the text box."""
+        self.text_code_display.delete("0.0", "end")
+        self.text_code_display.insert("0.0", f"--- {title} ---\n\n{code}")
+        # Auto-copy
+        try:
+            self.master.clipboard_clear()
+            self.master.clipboard_append(code)
+            messagebox.showinfo("Kopyalandı", "Kod panoya kopyalandı!")
+        except:
+            pass
+
     def join_session_manual(self):
         # Deprecated: Kept for compatibility if called, but UI is now SDP based
          pass
