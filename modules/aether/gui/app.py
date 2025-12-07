@@ -59,6 +59,9 @@ class AetherApp(ctk.CTkFrame):
 
         # GUI Setup
         self.setup_ui()
+        
+        # Bind cleanup to app destruction
+        self.bind("<Destroy>", self.on_app_destroy)
 
     def load_trusted_peers(self):
         if os.path.exists(self.trusted_peers_file):
@@ -665,11 +668,47 @@ class AetherApp(ctk.CTkFrame):
              print(f"[UI ERROR] UI Transition failed: {e}")
 
     def cleanup(self):
+        """Clean up WebRTC connection state for reconnection."""
         if self.pc:
-            self.run_async(self.pc.close())
+            try:
+                self.run_async(self.pc.close())
+            except:
+                pass
+            self.pc = None
+        
+        # Reset channel state
+        self.channel = None
+        
+        # Clear connection failure flag if exists
+        if hasattr(self, 'connection_failed_notified'):
+            del self.connection_failed_notified
+        
+        # DON'T stop discovery/handshake - we need them for reconnection!
+        # Only stop them when the entire app is closing
+        print("[AETHER] WebRTC connection cleaned up, ready for reconnection")
+    
+    def on_app_destroy(self, event):
+        """Called when the app widget is destroyed - do full cleanup."""
+        print("[AETHER] App destroying, cleaning up all resources...")
+        
+        # Close WebRTC
+        if self.pc:
+            try:
+                self.run_async(self.pc.close())
+            except:
+                pass
+        
+        # Stop discovery and handshake servers
         try:
-            if hasattr(self, 'discovery'): self.discovery.stop()
-            if hasattr(self, 'handshake'): self.handshake.stop()
+            if hasattr(self, 'discovery'):
+                self.discovery.stop()
+            if hasattr(self, 'handshake'):
+                self.handshake.stop()
         except:
             pass
-        self.loop.stop()
+        
+        # Stop event loop
+        try:
+            self.loop.stop()
+        except:
+            pass
