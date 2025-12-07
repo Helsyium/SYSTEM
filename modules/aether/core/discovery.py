@@ -4,6 +4,8 @@ import time
 import json
 import uuid
 import logging
+import hmac
+import hashlib
 from typing import Callable, Dict
 
 import os
@@ -12,6 +14,7 @@ import os
 BROADCAST_IP = "255.255.255.255"
 DISCOVERY_PORT = 50005
 BEACON_INTERVAL = 2.0  # Seconds
+SECRET_KEY = b"AETHER_SECURE_V1" # Shared secret for LAN security
 
 class NetworkDiscovery:
     """
@@ -27,6 +30,7 @@ class NetworkDiscovery:
         self.tcp_port = tcp_port
         self.running = False
         self.peers: Dict[str, dict] = {} 
+        self.peers_lock = threading.Lock() # Thread Safety
         self.on_peer_found: Callable = None
         
         # Sockets
@@ -108,6 +112,10 @@ class NetworkDiscovery:
         except:
             return "127.0.0.1", "255.255.255.255"
 
+    def _sign_message(self, msg_str):
+        """Create HMAC-SHA256 signature."""
+        return hmac.new(SECRET_KEY, msg_str.encode('utf-8'), hashlib.sha256).hexdigest()
+
     def _broadcast_loop(self):
         """Periodically broadcast presence."""
         while self.running:
@@ -122,7 +130,16 @@ class NetworkDiscovery:
                     "port": self.tcp_port,
                     "ts": time.time()
                 }
-                data = json.dumps(msg).encode('utf-8')
+                
+                payload_str = json.dumps(msg)
+                signature = self._sign_message(payload_str)
+                
+                final_packet = {
+                    "p": msg,
+                    "s": signature
+                }
+                
+                data = json.dumps(final_packet).encode('utf-8')
                 
                 # Send to Directed Broadcast (Address specific subnet)
                 self.sock_broadcast.sendto(data, (broadcast_target, DISCOVERY_PORT))
@@ -140,12 +157,31 @@ class NetworkDiscovery:
         """Listen for UDP beacons."""
         while self.running:
             try:
-                data, addr = self.sock_listen.recvfrom(1024)
+                data, addr = self.sock_listen.recvfrom(2048) # Increased buffer for signature
                 sender_ip = addr[0]
                 
                 # Decode
                 try:
-                    msg = json.loads(data.decode('utf-8'))
+                    packet = json.loads(data.decode('utf-8'))
+                    
+                    # Backward compatibility safely handled (if no 's' key, drop or warn)
+                    if "p" not in packet or "s" not in packet:
+                        continue
+                        
+                    payload = packet["p"]
+                    signature = packet["s"]
+                    
+                    # Verify Signature
+                    payload_str = json.dumps(payload)
+                    expected_sig = self._sign_message(payload_str)
+                    
+                    # Prevent timing attacks (overt for LAN but good practice)
+                    if not hmac.compare_digest(signature, expected_sig):
+                        # print(f"[DISCOVERY] Invalid Signature from {sender_ip}")
+                        continue
+                        
+                    msg = payload
+                    
                 except:
                     continue
 
@@ -166,21 +202,26 @@ class NetworkDiscovery:
 
     def _handle_peer(self, ip, msg):
         peer_id = msg["id"]
-        is_new = peer_id not in self.peers
         
-        # Update peer info
-        self.peers[peer_id] = {
-            "id": peer_id, # Crucial for UI identification
-            "ip": ip,
-            "port": msg["port"],
-            "user": msg["user"],
-            "last_seen": time.time()
-        }
+        with self.peers_lock:
+            is_new = peer_id not in self.peers
+            
+            # Update peer info
+            self.peers[peer_id] = {
+                "id": peer_id, 
+                "ip": ip,
+                "port": msg["port"],
+                "user": msg["user"],
+                "last_seen": time.time()
+            }
         
         if is_new:
             print(f"[DISCOVERY] New Peer Found: {msg['user']} ({ip})")
             if self.on_peer_found:
-                self.on_peer_found(self.peers[peer_id])
+                # Retrieve copy to send to callback
+                with self.peers_lock:
+                    peer_data = self.peers[peer_id].copy()
+                self.on_peer_found(peer_data)
                 
     def get_peers(self):
         # Prune old peers (> 10s)
@@ -188,14 +229,14 @@ class NetworkDiscovery:
         active_peers = []
         to_remove = []
         
-        for pid, pdata in self.peers.items():
-            if now - pdata["last_seen"] > 10:
-                to_remove.append(pid)
-            else:
-                active_peers.append(pdata)
-                
-        for pid in to_remove:
-            del self.peers[pid]
-            # Optionally trigger on_peer_lost
+        with self.peers_lock:
+            for pid, pdata in self.peers.items():
+                if now - pdata["last_seen"] > 10:
+                    to_remove.append(pid)
+                else:
+                    active_peers.append(pdata)
+                    
+            for pid in to_remove:
+                del self.peers[pid]
             
         return active_peers

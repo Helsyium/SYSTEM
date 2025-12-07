@@ -87,32 +87,63 @@ class UPnPManager:
             # Fetch XML description
             resp = urllib.request.urlopen(url, timeout=3)
             data = resp.read()
-            root = ET.fromstring(data)
-            ns = {'n': 'urn:schemas-upnp-org:device-1-0'} # Standard namespace
             
-            # Find WANIPConnection service
-            # This is a simplified search, real XML parsing can be complex because of namespaces
-            # We treat content as string to find the service control URL for simplicity
-            content = data.decode()
-            
-            # Very basic extraction (Robust enough for most routers)
-            if "WANIPConnection:1" in content:
-                # Find Service block
-                parts = content.split("WANIPConnection:1")
-                # Look ahead for controlURL
-                after = parts[1]
-                if "<controlURL>" in after:
-                    ctrl = after.split("<controlURL>")[1].split("</controlURL>")[0]
-                    
+            # Robust XML Parsing (Namespace Agnostic)
+            try:
+                root = ET.fromstring(data)
+                
+                control_url = None
+                # Iterate recursively over all elements
+                for node in root.iter():
+                    # Check if this node is a 'service' container
+                    if node.tag.lower().endswith("service"):
+                        s_type = None
+                        c_url = None
+                        
+                        # Check children for serviceType and controlURL
+                        for child in node:
+                            if child.tag.lower().endswith("servicetype"):
+                                s_type = child.text
+                            elif child.tag.lower().endswith("controlurl"):
+                                c_url = child.text
+                        
+                        # Match WANIPConnection
+                        if s_type and "WANIPConnection:1" in s_type and c_url:
+                            control_url = c_url
+                            break
+                
+                if control_url:
                     # Construct full URL
                     parse = urllib.parse.urlparse(url)
                     base = f"{parse.scheme}://{parse.netloc}"
-                    if not ctrl.startswith("/"):
-                        ctrl = "/" + ctrl
-                    self.service_url = base + ctrl
+                    if not control_url.startswith("/"):
+                        control_url = "/" + control_url
+                    self.service_url = base + control_url
                     print(f"[UPnP] Service URL found: {self.service_url}")
+                    return
+
+            except Exception as xml_e:
+                print(f"[UPnP] XML Error: {xml_e}")
+
+            # Fallback: Simple String Search (Last Resort)
+            # Some old routers have really broken XML that ET rejects
+            content = data.decode()
+            if "WANIPConnection:1" in content:
+                parts = content.split("WANIPConnection:1")
+                if len(parts) > 1:
+                    after = parts[1]
+                    if "<controlURL>" in after:
+                        ctrl = after.split("<controlURL>")[1].split("</controlURL>")[0]
+                        
+                        parse = urllib.parse.urlparse(url)
+                        base = f"{parse.scheme}://{parse.netloc}"
+                        if not ctrl.startswith("/"):
+                            ctrl = "/" + ctrl
+                        self.service_url = base + ctrl
+                        print(f"[UPnP] Service URL found (Fallback): {self.service_url}")
+
         except Exception as e:
-            print(f"[UPnP] XML Parse Error: {e}")
+            print(f"[UPnP] Descriptor Fetch Error: {e}")
 
     def add_port_mapping(self, external_port, internal_port, protocol="TCP", lease_duration=0, description="Aether P2P"):
         if not self.service_url or not self.local_ip:
