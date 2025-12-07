@@ -44,6 +44,7 @@ class NetworkDiscovery:
         
         self.sock_listen = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock_listen.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock_listen.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1) # REQUIRED for Windows to receive broadcasts
         
         # Mac/Linux specific optimization
         if hasattr(socket, "SO_REUSEPORT"):
