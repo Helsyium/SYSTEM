@@ -194,12 +194,12 @@ class AetherApp(ctk.CTkFrame):
         # JOIN SECTION
         frame_join = ctk.CTkFrame(self.frame_manual, fg_color=THEME["colors"]["bg_card"])
         frame_join.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(frame_join, text="Bağlan (Join) - Kodu Yapıştır", font=("Roboto", 12, "bold")).pack(pady=5)
+        ctk.CTkLabel(frame_join, text="Bağlan (Join) - Kodu Aşağıya Yapıştırın:", font=("Roboto", 12, "bold")).pack(pady=5)
 
         self.entry_join_code = ctk.CTkTextbox(frame_join, height=100)
         self.entry_join_code.pack(fill="x", padx=10, pady=5)
-        self.entry_join_code.insert("0.0", "Kodu buraya yapıştırın...")
-
+        # Placeholder removed to prevent "ghost text" issues
+        
         btn_join = ctk.CTkButton(frame_join, text="Bağlan", command=self.process_offer_and_generate_answer,
                                  fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"])
         btn_join.pack(pady=10, padx=10, fill="x")
