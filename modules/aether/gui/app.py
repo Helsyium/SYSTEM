@@ -265,26 +265,67 @@ class AetherApp(ctk.CTkFrame):
         self.cleanup()
         self.go_back()
     def create_pc(self):
+        # Use multiple STUN servers for better reliability
         stun_servers = [
             "stun:stun.l.google.com:19302",
             "stun:stun1.l.google.com:19302",
             "stun:stun2.l.google.com:19302",
-            "stun:stun.services.mozilla.com"
+            "stun:stun.services.mozilla.com:3478"
         ]
-        config = RTCConfiguration(iceServers=[RTCIceServer(urls=url) for url in stun_servers])
+        
+        config = RTCConfiguration(
+            iceServers=[RTCIceServer(urls=stun_servers)],
+            iceTransportPolicy="all",  # Try all available candidates
+            iceCandidatePoolSize=10    # Pre-gather more ICE candidates
+        )
         pc = RTCPeerConnection(configuration=config)
         
-        @pc.on("connectionstatechange")
-        def on_connectionstatechange():
-            print(f"[AETHER DEBUG] Connection state: {pc.connectionState}")
-            self.update_status(f"Bağlantı Durumu: {pc.connectionState}")
-
+        @pc.on("icegatheringstatechange")
+        async def on_icegatheringstatechange():
+            print(f"[AETHER DEBUG] ICE gathering state: {pc.iceGatheringState}")
+        
         @pc.on("iceconnectionstatechange")
-        def on_iceconnectionstatechange():
-            print(f"[AETHER DEBUG] ICE state: {pc.iceConnectionState}")
-            self.update_status(f"ICE Durumu: {pc.iceConnectionState}")
+        async def on_iceconnectionstatechange():
+            state = pc.iceConnectionState
+            print(f"[AETHER DEBUG] ICE state: {state}")
+            self.update_status(f"ICE Durumu: {state}")
             
+            # Handle failed/disconnected states
+            if state == "failed":
+                self.master.after(0, lambda: self.handle_connection_failure("ICE bağlantısı başarısız"))
+            elif state == "disconnected":
+                # Give it 5 seconds to reconnect before declaring failure
+                await asyncio.sleep(5)
+                if pc.iceConnectionState == "disconnected":
+                    self.master.after(0, lambda: self.handle_connection_failure("Bağlantı kesildi"))
+        
+        @pc.on("connectionstatechange")
+        async def on_connectionstatechange():
+            state = pc.connectionState
+            print(f"[AETHER DEBUG] Connection state: {state}")
+            self.update_status(f"Bağlantı Durumu: {state}")
+            
+            if state == "failed":
+                self.master.after(0, lambda: self.handle_connection_failure("WebRTC bağlantısı başarısız"))
+            elif state == "closed":
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", "Bağlantı kapandı. 🔴"))
+        
         return pc
+    
+    def handle_connection_failure(self, reason):
+        """Handle connection failure with user notification."""
+        if not hasattr(self, 'connection_failed_notified'):
+            self.connection_failed_notified = True
+            self.add_chat_message("SYSTEM", f"⚠️ {reason}")
+            
+            # Offer to reconnect
+            if messagebox.askyesno("Bağlantı Sorunu", f"{reason}\n\nTekrar bağlanmayı denemek ister misin?"):
+                # Clear flag and attempt reconnect
+                del self.connection_failed_notified
+                # TODO: Implement auto-reconnect logic
+                self.add_chat_message("SYSTEM", "Otomatik yeniden bağlanma yakında eklenecek...")
+            else:
+                self.cleanup_and_home()
 
     def update_status(self, text):
         def _update():
