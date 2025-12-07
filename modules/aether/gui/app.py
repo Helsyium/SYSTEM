@@ -102,51 +102,80 @@ class AetherApp(ctk.CTkFrame):
         self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
         # TITLE
-        self.lbl_title = ctk.CTkLabel(self.main_container, text="AETHER P2P AĞI", font=("Roboto", 24, "bold"))
+        self.lbl_title = ctk.CTkLabel(self.main_container, text="AETHER P2P (MANUEL MOD)", font=("Roboto", 24, "bold"))
         self.lbl_title.pack(pady=(0, 20))
 
-        # --- FRAMES ---
-        # 1. Home Menu (3 Options)
-        self.frame_home = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        # Direct Chat & Manual Connect Panels
+        self.frame_split = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self.frame_split.pack(fill="both", expand=True)
+
+        self.frame_chat = ctk.CTkFrame(self.frame_split, fg_color="transparent")
+        self.frame_chat.pack(side="left", fill="both", expand=True, padx=10)
         
-        # 2. Sub-Panels
-        self.frame_discovery = ctk.CTkFrame(self.main_container) # Same Wi-Fi
-        self.frame_manual = ctk.CTkFrame(self.main_container)    # Different Wi-Fi
-        self.frame_trusted = ctk.CTkFrame(self.main_container)   # Trusted Peers
-        self.frame_chat = ctk.CTkFrame(self.main_container)      # Valid Connected Session
-        
-        # Build Navigation
-        self.build_home_menu()
-        self.build_discovery_panel()
-        self.build_manual_panel()
-        self.build_trusted_panel()
+        self.frame_manual = ctk.CTkFrame(self.frame_split, fg_color="transparent")
+        self.frame_manual.pack(side="right", fill="both", expand=True, padx=10)
+
+        # Build Panels
         self.build_chat_panel()
+        self.build_manual_panel()
 
-        # Show Home by default
-        self.show_home()
+    def build_chat_panel(self):
+        """Build the chat area."""
+        # Header
+        header = ctk.CTkFrame(self.frame_chat, height=50, fg_color="transparent")
+        header.pack(fill="x")
+        ctk.CTkLabel(header, text="💬 Sohbet", font=THEME["fonts"]["header"]).pack(side="left", padx=10)
 
-    def build_home_menu(self):
-        """Create the 3 main option buttons."""
-        # Option 1: Same Wi-Fi (Auto)
-        btn_wifi = ctk.CTkButton(self.frame_home, text="🏠 AYNI WI-FI (OTOMATİK)", 
-                                 command=self.show_discovery_panel,
-                                 height=60, font=("Roboto", 16, "bold"), fg_color=THEME["colors"]["accent"], text_color="black")
-        status_text = "Dışarıdan Erişilebilir (UPnP Açık)"
-        status_color = "#4CAF50" # Green
+        # Chat History
+        self.chat_history = ctk.CTkTextbox(self.frame_chat, state="disabled", wrap="word")
+        self.chat_history.pack(fill="both", expand=True, pady=10)
+
+        # Input Area
+        input_frame = ctk.CTkFrame(self.frame_chat, height=50, fg_color="transparent")
+        input_frame.pack(fill="x", pady=5)
         
-        # Check UPnP status (Simple check based on previous logs logic or a flag)
-        # Ideally we should start a quick check thread here, but for now we assume based on app state
-        # A more robust implementation would check self.handshake.sock port mapping status
+        self.entry_message = ctk.CTkEntry(input_frame, placeholder_text="Mesaj yaz...")
+        self.entry_message.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.entry_message.bind("<Return>", lambda e: self.send_message())
+
+        btn_send = ctk.CTkButton(input_frame, text="Gönder", command=self.send_message, width=100,
+                                 fg_color=THEME["colors"]["accent"], text_color=THEME["colors"]["accent_text"],
+                                 hover_color=THEME["colors"]["accent_hover"])
+        btn_send.pack(side="right")
         
-        if hasattr(self, 'discovery') and self.discovery:
-             # This is just a placeholder, real status needs async check result
-             pass
+    def build_manual_panel(self):
+        """Panel for Manual Host/Join (Traditional)."""
+        ctk.CTkLabel(self.frame_manual, text="🔗 Manuel Bağlantı", font=THEME["fonts"]["subheader"]).pack(pady=(0, 20))
+        
+        # HOST SECTION
+        frame_host = ctk.CTkFrame(self.frame_manual, fg_color=THEME["colors"]["bg_card"])
+        frame_host.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(frame_host, text="Bağlantı Başlat (Host)", font=("Roboto", 12, "bold")).pack(pady=5)
+        
+        btn_host = ctk.CTkButton(frame_host, text="Kod Oluştur", command=self.generate_offer,
+                                 fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"],
+                                 text_color="black")
+        btn_host.pack(pady=10, padx=10, fill="x")
 
-        status_label = ctk.CTkLabel(self.frame_manual, text=f"Durum: {status_text}", text_color=status_color, font=("Roboto", 12, "bold")) # Changed from self.frame_modes to self.frame_manual
-        status_label.pack()
+        # JOIN SECTION
+        frame_join = ctk.CTkFrame(self.frame_manual, fg_color=THEME["colors"]["bg_card"])
+        frame_join.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(frame_join, text="Bağlan (Join)", font=("Roboto", 12, "bold")).pack(pady=5)
 
-        frame_join = ctk.CTkFrame(self.frame_manual, fg_color="transparent") # Changed from self.frame_modes to self.frame_manual
-        frame_join.pack(pady=10, fill="x", padx=40)
+        self.entry_join_code = ctk.CTkTextbox(frame_join, height=100)
+        self.entry_join_code.pack(fill="x", padx=10, pady=5)
+        self.entry_join_code.insert("0.0", "Kodu buraya yapıştırın...")
+
+        btn_join = ctk.CTkButton(frame_join, text="Bağlan", command=self.process_offer_and_generate_answer,
+                                 fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"])
+        btn_join.pack(pady=10, padx=10, fill="x")
+
+        # Code Display Area
+        self.frame_signaling = ctk.CTkFrame(self.frame_manual, fg_color="transparent")
+        self.frame_signaling.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.text_code_display = ctk.CTkTextbox(self.frame_signaling, wrap="word")
+        self.text_code_display.pack(fill="both", expand=True)
         
         ctk.CTkLabel(frame_join, text="veya", text_color="gray").pack()
         
