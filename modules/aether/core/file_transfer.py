@@ -1,3 +1,10 @@
+import os
+import json
+import base64
+import uuid
+import time
+import threading
+from typing import Callable, Dict, Optional
 import hashlib # [NEW] Added for integrity check
 
 class FileTransferManager:
