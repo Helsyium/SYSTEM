@@ -274,9 +274,7 @@ class AetherApp(ctk.CTkFrame):
         ]
         
         config = RTCConfiguration(
-            iceServers=[RTCIceServer(urls=stun_servers)],
-            iceTransportPolicy="all",  # Try all available candidates
-            iceCandidatePoolSize=10    # Pre-gather more ICE candidates
+            iceServers=[RTCIceServer(urls=stun_servers)]
         )
         pc = RTCPeerConnection(configuration=config)
         
