@@ -226,8 +226,7 @@ class AetherApp(ctk.CTkFrame):
         for pid, data in self.trusted_peers.items():
             card = ctk.CTkFrame(self.scroll_trusted, fg_color=THEME["colors"]["bg_card"])
             card.pack(fill="x", pady=5)
-            
-            # Check if peer is currently online in discovery
+        # Check if peer is currently online in discovery
             live_peer = self.discovery.peers.get(pid) if hasattr(self, 'discovery') else None
             
             status_text = "🟢 ÇEVRİMİÇİ" if live_peer else "⚫ ÇEVRİMDIŞI"
@@ -238,13 +237,25 @@ class AetherApp(ctk.CTkFrame):
             
             # Connect button - use live peer data if available, otherwise use cached data
             if live_peer:
-                # Peer is online, use current discovery info
+                # Peer is online (LAN), use current discovery info
                 btn = ctk.CTkButton(card, text="BAĞLAN", width=80, 
                                     command=lambda p=live_peer, i=pid: self.start_auto_connection({**p, "id": i}),
                                     fg_color=THEME["colors"]["success"])
+            elif data.get('last_ip'):
+                # Peer is offline in LAN, but we have an IP (WAN/Cached) -> Try Blind Connect
+                # Use cached data
+                cached_peer_info = {
+                    "ip": data['last_ip'], 
+                    "port": data.get('last_port', self.handshake.port), # Fallback to local port if missing, usually works if symmetric
+                    "user": data.get('user', 'Unknown'),
+                    "id": pid
+                }
+                btn = ctk.CTkButton(card, text="DENEYİN (WAN)", width=80, 
+                                    command=lambda p=cached_peer_info: self.start_auto_connection(p),
+                                    fg_color="orange", text_color="black") # Orange for "Try"
             else:
-                # Peer offline, disable button or show warning
-                btn = ctk.CTkButton(card, text="ÇEVRİMDIŞI", width=80, state="disabled",
+                # No IP known
+                btn = ctk.CTkButton(card, text="BİLİNMİYOR", width=80, state="disabled",
                                     fg_color="gray")
             btn.pack(side="right", padx=10)
 
