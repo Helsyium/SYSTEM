@@ -185,7 +185,8 @@ class AetherApp(ctk.CTkFrame):
         frame_host.pack(fill="x", padx=10, pady=10)
         ctk.CTkLabel(frame_host, text="Bağlantı Başlat (Host) - Kod Oluştur", font=("Roboto", 12, "bold")).pack(pady=5)
         
-        btn_host = ctk.CTkButton(frame_host, text="Kod Oluştur", command=self.generate_offer,
+        btn_host = ctk.CTkButton(frame_host, text="Kod Oluştur", 
+                                 command=lambda: self.run_async(self.generate_offer()),
                                  fg_color=THEME["colors"]["accent"], hover_color=THEME["colors"]["accent_hover"],
                                  text_color="black")
         btn_host.pack(pady=10, padx=10, fill="x")
