@@ -777,7 +777,7 @@ class AetherApp(ctk.CTkFrame):
     def start_auto_connection(self, peer_info):
         """User clicked 'Connect' on a peer."""
         self.frame_discovery.pack_forget()
-        self.frame_trusted.pack_forget() # Also hide trusted if called from there
+        # self.frame_trusted.pack_forget() # Removed as trusted panel is deprecated
         self.frame_chat.pack(fill="both", expand=True) # Prepare UI
         self.add_chat_message("SYSTEM", f"Bağlanılıyor: {peer_info['user']} ({peer_info['ip']})...")
         
