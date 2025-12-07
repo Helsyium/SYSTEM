@@ -170,6 +170,7 @@ class NetworkDiscovery:
         
         # Update peer info
         self.peers[peer_id] = {
+            "id": peer_id, # Crucial for UI identification
             "ip": ip,
             "port": msg["port"],
             "user": msg["user"],
