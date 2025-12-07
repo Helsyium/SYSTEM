@@ -855,13 +855,14 @@ class AetherApp(ctk.CTkFrame):
             await self.set_remote_answer(answer_json) # Using existing set_remote_answer for simplicity
             
         except Exception as e:
-            print(f"[AUTO-CONNECT ERROR] {e}")
-            if "Peer is busy" in str(e):
+            err_msg_connect = str(e)
+            print(f"[AUTO-CONNECT ERROR] {err_msg_connect}")
+            if "Peer is busy" in err_msg_connect:
                 self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⚠️ {target_ip} şu an meşgul."))
             else:
-                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⚠️ Bağlantı hatası: {e}"))
-                self.master.after(0, lambda: messagebox.showerror("Hata", f"Otomatik bağlantı başarısız: {e}"))
-                self.master.after(0, self.cleanup_and_home) # Assuming cleanup_and_home exists
+                self.master.after(0, lambda: self.add_chat_message("SYSTEM", f"⚠️ Bağlantı hatası: {err_msg_connect}"))
+                self.master.after(0, lambda: messagebox.showerror("Hata", f"Otomatik bağlantı başarısız: {err_msg_connect}"))
+                self.master.after(0, self.cleanup_and_home)
         finally:
             self.connection_lock.release()
 
