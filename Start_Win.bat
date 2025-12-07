@@ -52,7 +52,19 @@ IF %ERRORLEVEL% NEQ 0 (
 
 :: 4. Uygulamayi Baslat (Direkt Venv Python ile)
 ECHO.
-ECHO [BILGI] Uygulama baslatiliyor...
+ECHO [BILGI] Uygulama:: Firewall Configuration for Aether P2P
+echo [INFO] Configuring Windows Firewall for Aether P2P (Ports 54000-54010)...
+netsh advfirewall firewall show rule name="Aether P2P" >nul
+if %errorlevel% neq 0 (
+    powershell -Command "Start-Process netsh -ArgumentList 'advfirewall firewall add rule name=""Aether P2P"" dir=in action=allow protocol=TCP localport=54000-54010' -Verb RunAs"
+    echo [SUCCESS] Firewall rule added!
+) else (
+    echo [INFO] Firewall rule already exists.
+)
+
+:: Run the System
+echo.
+echo [INFO] Starting SYSTEM...
 venv\Scripts\python.exe system/main.py
 
 IF %ERRORLEVEL% NEQ 0 (
