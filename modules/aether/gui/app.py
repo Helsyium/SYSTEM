@@ -34,6 +34,7 @@ class AetherApp(ctk.CTkFrame):
         # --- AETHER AUTOMATION MODULES ---
         from modules.aether.core.discovery import NetworkDiscovery
         from modules.aether.core.handshake import HandshakeManager
+        from modules.aether.core.file_transfer import FileTransferManager # [NEW]
         import platform # For hostname defaults
 
         # 1. Start Handshake Server (TCP) - Listens for incoming Offers
@@ -50,6 +51,12 @@ class AetherApp(ctk.CTkFrame):
         self.discovery = NetworkDiscovery(username=my_hostname, tcp_port=self.handshake.port, storage_dir=aether_data_dir)
         self.discovery.on_peer_found = self.on_peer_found_callback
         self.discovery.start()
+        
+        # 3. Initialize File Transfer Manager
+        self.file_manager = FileTransferManager(
+            on_progress=self.update_file_progress,
+            on_complete=self.on_file_complete
+        )
         
         # Store peers locally for UI mapping
         self.known_peers = {} # {display_string: peer_data}
@@ -213,11 +220,30 @@ class AetherApp(ctk.CTkFrame):
         self.entry_message.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
         self.entry_message.bind("<Return>", self.send_message)
         
-        self.btn_send = ctk.CTkButton(self.frame_chat, text="GÖNDER", command=self.send_message, fg_color=THEME["colors"]["accent"], text_color="black")
-        self.btn_send.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
+        self.entry_message.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        self.entry_message.bind("<Return>", self.send_message)
+        
+        # --- File Transfer Controls ---
+        self.frame_file_controls = ctk.CTkFrame(self.frame_chat, fg_color="transparent")
+        self.frame_file_controls.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
+        
+        self.btn_file = ctk.CTkButton(self.frame_file_controls, text="📎 Dosya Ekle", 
+                                      command=self.select_file,
+                                      width=100, fg_color=THEME["colors"]["bg_card"])
+        self.btn_file.pack(side="left", padx=(0, 10))
+        
+        self.btn_send = ctk.CTkButton(self.frame_file_controls, text="GÖNDER", command=self.send_message, 
+                                      fg_color=THEME["colors"]["accent"], text_color="black")
+        self.btn_send.pack(side="left", fill="x", expand=True)
+        
+        # Progress Bar (Hidden by default)
+        self.progress_file = ctk.CTkProgressBar(self.frame_chat)
+        self.progress_file.set(0)
+        self.lbl_file_status = ctk.CTkLabel(self.frame_chat, text="", font=("Roboto", 10))
         
         # Close Chat / Disconnect
-        ctk.CTkButton(self.frame_chat, text="BAĞLANTIYI KES", command=self.cleanup_and_home, fg_color="red").grid(row=3, column=0, pady=5)
+        ctk.CTkButton(self.frame_chat, text="BAĞLANTIYI KES", command=self.cleanup_and_home, fg_color="red").grid(row=4, column=0, pady=5)
+
 
     def cleanup_and_home(self):
         self.cleanup()
@@ -445,6 +471,18 @@ class AetherApp(ctk.CTkFrame):
                 if isinstance(message, bytes):
                     message = message.decode('utf-8')
                 
+                # Check if it's a JSON (File Transfer Protcol)
+                if message.startswith('{') and '"type":' in message:
+                     try:
+                         data = json.loads(message)
+                         msg_type = data.get("type")
+                         if msg_type in ["file_meta", "file_chunk"]:
+                             # Pass to File Manager
+                             self.file_manager.handle_message(data)
+                             return # Don't show in chat
+                     except json.JSONDecodeError:
+                         pass
+
                 print(f"[AETHER DEBUG] Processing message: {message}")
                 self.master.after(0, lambda m=message: self.add_chat_message("Partner", m))
             except Exception as e:
@@ -693,6 +731,73 @@ class AetherApp(ctk.CTkFrame):
         # Only stop them when the entire app is closing
         print("[AETHER] WebRTC connection cleaned up, ready for reconnection")
     
+    
+    # --- FILE TRANSFER LOGIC ---
+    def select_file(self):
+        """Open file picker and start transfer."""
+        if not self.channel or self.channel.readyState != "open":
+             messagebox.showerror("Hata", "Bağlantı açık değil!")
+             return
+             
+        filepath = ctk.filedialog.askopenfilename()
+        if not filepath:
+            return
+            
+        # Start async upload in background
+        self.run_async(self.async_send_file(filepath))
+
+    async def async_send_file(self, filepath):
+        try:
+            # 1. Prepare Metadata (Calculates Hash)
+            meta = await self.loop.run_in_executor(None, self.file_manager.prepare_upload, filepath)
+            
+            # 2. Send Metadata
+            self.channel.send(json.dumps(meta))
+            
+            # 3. Send Chunks
+            for chunk in self.loop.run_in_executor(None, lambda: list(self.file_manager.read_chunks(filepath, meta['id']))):
+                 # We iterate list() here to force generator to run in executor if heavy, 
+                 # but actually read_chunks yields.
+                 # Better approach for async loop:
+                 pass
+            
+            # Proper Async Generator iteration
+            # Since read_chunks is sync generator, we run it directly but be careful of blocking
+            # Ideally rewrite read_chunks to be no-blocking or small chunks. 
+            # Given 16KB chunks, direct iteration is fine if we yield control.
+            
+            gen = self.file_manager.read_chunks(filepath, meta['id'])
+            for chunk_msg in gen:
+                self.channel.send(json.dumps(chunk_msg))
+                await asyncio.sleep(0.001) # Yield to event loop to keep UI responsive
+                
+        except Exception as e:
+            print(f"[FILE ERROR] {e}")
+            self.master.after(0, lambda: messagebox.showerror("Transfer Hatası", str(e)))
+
+    def update_file_progress(self, filename, percent, status):
+        """Called by FileTransferManager on p_rogress."""
+        def _update():
+            # Show progress bar if hidden
+            if not self.progress_file.winfo_ismapped():
+                self.progress_file.grid(row=3, column=0, sticky="ew", padx=10, pady=(5,0))
+                self.lbl_file_status.grid(row=4, column=0, padx=10)
+                
+            self.progress_file.set(percent / 100)
+            self.lbl_file_status.configure(text=f"{filename}: {status}")
+            
+        self.master.after(0, _update)
+
+    def on_file_complete(self, filename, full_path):
+        """Called by FileTransferManager when complete."""
+        def _finish():
+            self.progress_file.grid_forget()
+            self.lbl_file_status.grid_forget()
+            self.add_chat_message("SYSTEM", f"Dosya Alındı: {filename} ✅\nKonum: {full_path}")
+            messagebox.showinfo("İndirme Tamamlandı", f"Dosya hazır:\n{full_path}")
+            
+        self.master.after(0, _finish)
+
     def on_app_destroy(self, event):
         """Called when the app widget is destroyed - do full cleanup."""
         print("[AETHER] App destroying, cleaning up all resources...")
