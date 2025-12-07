@@ -47,6 +47,49 @@ class NetworkDiscovery:
         self.thread_broadcast = None
         self.thread_listen = None
 
+    def _load_or_create_device_id(self):
+        """Load persistent device ID or create new one."""
+        id_file = os.path.join(self.storage_dir, "aether_identity.json")
+        if os.path.exists(id_file):
+            try:
+                with open(id_file, "r") as f:
+                    data = json.load(f)
+                    return data.get("device_id", str(uuid.uuid4()))
+            except:
+                pass
+        
+        new_id = str(uuid.uuid4())
+        try:
+            with open(id_file, "w") as f:
+                json.dump({"device_id": new_id}, f)
+        except:
+            pass
+        return new_id
+        
+    def start(self):
+        self.running = True
+        try:
+            # Bind to all interfaces
+            self.sock_listen.bind(("", DISCOVERY_PORT))
+        except Exception as e:
+            print(f"[DISCOVERY] Bind failed (Port {DISCOVERY_PORT} busy?): {e}")
+            return
+
+        self.thread_broadcast = threading.Thread(target=self._broadcast_loop, daemon=True)
+        self.thread_listen = threading.Thread(target=self._listen_loop, daemon=True)
+        
+        self.thread_broadcast.start()
+        self.thread_listen.start()
+        print(f"[DISCOVERY] Started. My ID: {self.device_id[:8]}")
+
+    def stop(self):
+        self.running = False
+        try:
+            self.sock_broadcast.close()
+            self.sock_listen.close()
+        except:
+            pass
+
     def _get_local_ip_and_broadcast(self):
         """Determine Local IP and subnet-specific broadcast address."""
         try:
