@@ -821,8 +821,8 @@ class AetherApp(ctk.CTkFrame):
             print(f"[AETHER] Auto-connecting to {target_ip}:{target_port}...")
             
             # Create Data Channel
-            channel = self.pc.createDataChannel("chat")
-            self.setup_channel(channel)
+            self.channel = self.pc.createDataChannel("chat")
+            self.setup_channel(self.channel)
 
             # Create Offer
             offer = await self.pc.createOffer()
