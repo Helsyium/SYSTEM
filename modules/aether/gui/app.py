@@ -622,16 +622,11 @@ class AetherApp(ctk.CTkFrame):
             answer = RTCSessionDescription(sdp=answer_json["sdp"], type=answer_json["type"])
             await self.pc.setRemoteDescription(answer)
             
-            # Save as Trusted if successful
-            self.save_trusted_peer(peer_info)
-            self.master.after(0, lambda: self.lbl_title.configure(text="BAĞLANDI (OTO) 🚀", text_color=THEME["colors"]["success"]))
-            
-        except Exception as e:
             print(f"[AUTO-CONNECT ERROR] {e}")
             self.master.after(0, lambda: messagebox.showerror("Hata", f"Otomatik bağlantı başarısız: {e}"))
             self.master.after(0, self.cleanup_and_home)
-        finally:
-            self.connection_lock.release()
+    finally:
+        self.connection_lock.release()
 
     def handle_incoming_offer_auto(self, offer_json):
         """Called by Handshake Server Thread when someone connects to us."""
