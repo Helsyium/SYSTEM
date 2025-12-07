@@ -461,8 +461,8 @@ class AetherApp(ctk.CTkFrame):
             on_open()
 
     def enable_chat_ui(self):
-        self.frame_signaling.grid_remove()
-        self.frame_chat.grid()
+        self.frame_signaling.pack_forget()
+        self.frame_chat.pack(fill="both", expand=True)
         self.lbl_title.configure(text="AETHER: BAĞLI 🟢", text_color=THEME["colors"]["success"])
 
     def send_message(self, event=None):
