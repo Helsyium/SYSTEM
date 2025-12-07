@@ -358,8 +358,8 @@ class AetherApp(ctk.CTkFrame):
 
     # --- HOST MODE ---
     def show_host_mode(self):
-        self.frame_modes.grid_remove()
-        self.frame_signaling.grid()
+        self.frame_modes.pack_forget()
+        self.frame_signaling.pack(fill="both", expand=True, pady=10)
         
         # UI Elements for Host
         self.lbl_status = ctk.CTkLabel(self.frame_signaling, text="Durum: Bekleniyor...", font=("Roboto", 14, "bold"), text_color="yellow")
