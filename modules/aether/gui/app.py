@@ -40,9 +40,8 @@ class AetherApp(ctk.CTkFrame):
         
         # 2. Start Discovery (UDP) - Broadcasts our TCP Port
         my_hostname = platform.node()
-        # Ensure we pass a storage path for identity persistence
-        from modules.vault.core.file_utils import FileUtils # Re-use if possible or just use cwd
-        # Simply use the current working directory for now or a specific modules/aether/data dir
+        
+        # Determine storage path for identity persistence
         import os
         aether_data_dir = os.path.join(os.getcwd(), "modules", "aether", "data")
         os.makedirs(aether_data_dir, exist_ok=True)
