@@ -23,7 +23,9 @@ class HandshakeManager:
         start_port = 54000
         for p in range(start_port, start_port + 10):
             try:
-                self.sock.bind(("", p))
+                # Explicitly bind to IPv4 ANY address (0.0.0.0)
+                # Binding to "" can sometimes defaut to IPv6 or localhost only on Windows
+                self.sock.bind(("0.0.0.0", p))
                 bound = True
                 break
             except OSError:
@@ -31,7 +33,7 @@ class HandshakeManager:
         
         if not bound:
             # Fallback to random port if all fixed ones are taken
-            self.sock.bind(("", 0))
+            self.sock.bind(("0.0.0.0", 0))
             
         self.sock.listen(1)
         self.port = self.sock.getsockname()[1]
