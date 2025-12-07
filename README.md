@@ -44,13 +44,16 @@ SHATTER v3.5 is built upon a **Defense-in-Depth** philosophy. It is not just an 
 ### 3. 🌩️ AETHER (P2P Mesh Network)
 A decentralized, serverless communication module designed for secure, censorship-resistant connectivity.
 
-- **Technology:** WebRTC (via `aiortc`), DTLS/SRTP Encryption.
-- **Topology:** Peer-to-Peer (Mesh capable in future).
-- **Features:** 
-    - **Serverless Signaling:** Uses a manual "Out-of-Band" signaling mechanism (Copy-Paste Offer/Answer), eliminating the need for a central signaling server and ensuring total privacy.
-    - **NAT Traversal:** Integration with public STUN servers for connectivity behind strict firewalls.
-    - **Cross-Platform:** Seamless communication between macOS and Windows devices.
-    - **Zero-Log:** No metadata retention, no central database. Messages are transient and end-to-end encrypted.
+- **Technology:** WebRTC (via `aiortc`), DTLS/SRTP Encryption, UDP Broadcast Discovery.
+- **Topology:** Hybrid Peer-to-Peer (LAN & WAN).
+- **Features:**
+    - **Hybrid Connectivity:**
+        - **🏠 Same WiFi (LAN):** Automatic serverless discovery of nearby peers via UDP Broadcast. One-click connection without codes.
+        - **🌍 Different WiFi (WAN):** Manual "Out-of-Band" signaling (Copy-Paste Offer/Answer) for connecting devices across the internet without central servers.
+    - **Serverless & Private:** No central signaling server, no database, no metadata retention.
+    - **NAT Traversal:** STUN support for connectivity behind firewalls.
+    - **Cross-Platform:** Seamless communication between macOS and Windows.
+    - **Non-Intrusive:** Works without requiring aggressive administrator privileges or complex firewall scripts.
 
 ---
 
