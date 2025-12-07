@@ -13,10 +13,26 @@ class HandshakeManager:
     def __init__(self, callback_on_offer, port=0):
         """
         callback_on_offer: Function(offer_json) -> answer_json (Async)
-        port: 0 for random available port
+        port: 0 for random available port, BUT we will try 54000 range first for stability.
         """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.bind(("", port))
+        
+        # Try to bind to a fixed port range (54000-54010) for persistence
+        # This allows cached Trusted Peers to reconnect even after app restart
+        bound = False
+        start_port = 54000
+        for p in range(start_port, start_port + 10):
+            try:
+                self.sock.bind(("", p))
+                bound = True
+                break
+            except OSError:
+                continue
+        
+        if not bound:
+            # Fallback to random port if all fixed ones are taken
+            self.sock.bind(("", 0))
+            
         self.sock.listen(1)
         self.port = self.sock.getsockname()[1]
         
