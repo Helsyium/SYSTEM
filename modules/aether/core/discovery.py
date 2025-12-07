@@ -18,7 +18,7 @@ MULTICAST_GROUP = "239.1.1.1" # Multicast Address
 DISCOVERY_PORT = 50005
 BEACON_INTERVAL = 2.0  # Seconds
 SECRET_KEY = b"AETHER_SECURE_V1" # Shared secret for LAN security
-replay_window = 30.0 # Max age of a beacon in seconds (Increased from 5s to 30s for clock skew)
+replay_window = 120.0 # Max age of a beacon in seconds (Increased to 120s for loose clock sync)
 
 class NetworkDiscovery:
     """
