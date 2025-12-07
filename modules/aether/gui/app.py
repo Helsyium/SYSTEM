@@ -240,6 +240,21 @@ class AetherApp(ctk.CTkFrame):
                                fg_color=THEME["colors"]["success"], hover_color=THEME["colors"]["success_hover"])
         btn_join.pack()
 
+    def join_session_manual(self):
+        """Handle manual IP connection."""
+        ip = self.entry_join_code.get().strip()
+        if not ip:
+            messagebox.showwarning("Uyarı", "Lütfen geçerli bir IP adresi girin.")
+            return
+            
+        # Try both port 54000 and the handshake port
+        port = 54000
+        if hasattr(self, 'handshake'):
+            port = self.handshake.port
+            
+        self.add_chat_message("SYSTEM", f"Manuel Bağlanılıyor: {ip}:{port}...")
+        self.run_async(self.async_auto_connect(ip, port))
+
         # Signaling Area (Dynamic content for manual mode)
         self.frame_signaling = ctk.CTkFrame(self.frame_manual)
         self.frame_signaling.pack(fill="both", expand=True, pady=10)
