@@ -22,7 +22,8 @@ class CryptoManager:
     SALT_SIZE = 16 # Vault Salt Size
     
     # Manifest Yapısı: [MAGIC(23)] + [SALT(16)] + [NONCE(12)] + [CIPHERTEXT]
-    MANIFEST_MAGIC = b"ANTIGRAVITY_VAULT_OK_v2" 
+    # Magic Header (Dosya İmzasını değiştiriyoruz)
+    MANIFEST_MAGIC = b"HELSYIUM_VAULT_OK_v2" 
     
     # Chunk Overhead: Nonce + Tag
     ENCRYPTED_CHUNK_OVERHEAD = NONCE_SIZE + TAG_SIZE
