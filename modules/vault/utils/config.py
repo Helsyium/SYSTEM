@@ -6,5 +6,5 @@
 # Ancak bu proje kapsamında taşınabilirlik ve basitlik için sabitliyoruz.
 GLOBAL_VAULT_SALT = b'\xd1\x8a\x02\x9f\x18\x2a\x7c\x44\x91\xe2\x04\xae\xbc\xdd\xfe\x99'
 
-APP_NAME = "Antigravity Vault"
-ENCRYPTED_EXT = ".agv" # Antigravity Vault
+APP_NAME = "Helsyium Vault"
+ENCRYPTED_EXT = ".agv" # Helsyium Vault (keeping extension .agv for now or change to .hsv?)

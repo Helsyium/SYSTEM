@@ -12,7 +12,7 @@ from modules.vault.utils.config import ENCRYPTED_EXT
 TEST_DIR = "verification_test_folder"
 TEST_FILE = "secret_data.txt"
 PASSWORD = "strong_password_123"
-CONTENT = b"Bu cok gizli bir veridir. Antigravity tarafindan korunmaktadir."
+CONTENT = b"Bu cok gizli bir veridir. Helsyium tarafindan korunmaktadir."
 
 def setup():
     if os.path.exists(TEST_DIR):

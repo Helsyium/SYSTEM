@@ -3,7 +3,7 @@ DIR=$(cd "$(dirname "$0")"; pwd)
 PROJECT_ROOT="$DIR"
 
 echo "==================================================="
-echo "  SYSTEM HUB - Antigravity Inc."
+echo "  SYSTEM HUB - Helsyium"
 echo "  Platform: macOS"
 echo "==================================================="
 
