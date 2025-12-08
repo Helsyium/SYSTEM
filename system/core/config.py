@@ -2,7 +2,7 @@
 import os
 
 APP_NAME = "SYSTEM v1.0"
-COMPANY_NAME = "Hellsyium"
+COMPANY_NAME = "Helsyium"
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
