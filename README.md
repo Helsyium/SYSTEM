@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
 ![Security](https://img.shields.io/badge/Security-Hardened%20v3.5-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-orange)
-![License](https://img.shields.io/badge/License-GPLv3-red)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
@@ -109,5 +109,7 @@ Start_Win.bat
 This software is provided "AS IS", without warranty of any kind. While it implements state-of-the-art cryptographic primitives, the author is not responsible for data loss or damages. **Always backup critical data.**
 
 ## 📜 License
-GNU General Public License v3.0 (GPLv3) © 2025 Hellsyium (System Hub)
-Permission is hereby granted to use, copy, modify, and distribute this software, ensuring that all derivative works remain free and open-source under the same terms.
+This project was generated using Google Antigravity IDE (powered by Gemini 3).  
+© 2025 Google LLC. All rights to AI-generated content reserved by Google.  
+See https://antigravity.google/terms for details.  
+Modifications by Helsyium – MIT License applies to my contributions.
