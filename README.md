@@ -9,18 +9,18 @@
 
 ---
 
-## 🚀 Core Modules
+##  Core Modules
 
-### 1. 🛡️ VAULT (Folder Locker)
+### 1.  VAULT (Folder Locker)
 A high-performance directory encryption module.
 - **Algorithm:** **ChaCha20-Poly1305** (Authenticated Encryption). *Surpasses AES-256 in software performance on mobile/legacy CPUs.*
 - **Key Derivation (KDF):** **Scrypt** (N=16384, r=8, p=1).
 - **Features:** Encrypts filenames, directory structures, and file contents. Zero-knowledge architecture.
 
-### 2. 🧩 SHATTER v3.5 (File Sharding Engine)
+### 2.  SHATTER v3.5 (File Sharding Engine)
 The flagship module of SYSTEM HUB. It implements a unique "Sharding & Encryption" strategy to secure files against advanced forensic analysis and "Cut-and-Paste" attacks.
 
-#### 🔐 Technical Architecture & Security Hardening (v3.5)
+####  Technical Architecture & Security Hardening (v3.5)
 
 SHATTER v3.5 is built upon a **Defense-in-Depth** philosophy. It is not just an encryption tool; it is a data fragmentation system.
 
@@ -34,7 +34,7 @@ SHATTER v3.5 is built upon a **Defense-in-Depth** philosophy. It is not just an 
 | **Randomness** | **secrets.token_bytes** | Uses the operating system's CSPRNG for all Salt and Key generation (replaced `os.urandom` for strict cryptographic compliance). |
 | **I/O Safety** | **Atomic Write (fsync)** | All chunks and manifests are written to temporary files and renamed only after `fsync` ensures disk persistence. Prevents corruption during power loss. |
 
-#### 🔄 Workflow
+####  Workflow
 1.  **Fragmentation:** Input file is divided into variable-sized chunks (1MB - 50MB based on total size).
 2.  **Key Gen:** A unique 32-byte key is generated for *each* chunk.
 3.  **Encryption:** Each chunk is encrypted independently using ChaCha20-Poly1305.
@@ -48,14 +48,14 @@ A decentralized, serverless communication module designed for secure, censorship
 - **Topology:** Hybrid Peer-to-Peer (LAN & WAN).
 - **Features:**
     - **Hybrid Connectivity:**
-        - **🏠 Same WiFi (LAN):** Automatic serverless discovery of nearby peers via UDP Broadcast. One-click connection without codes.
-        - **🌍 Different WiFi (WAN):** Manual "Out-of-Band" signaling (Copy-Paste Offer/Answer) for connecting devices across the internet without central servers.
+        - ** Same WiFi (LAN):** Automatic serverless discovery of nearby peers via UDP Broadcast. One-click connection without codes.
+        - ** Different WiFi (WAN):** Manual "Out-of-Band" signaling (Copy-Paste Offer/Answer) for connecting devices across the internet without central servers.
     - **Serverless & Private:** No central signaling server, no database, no metadata retention.
     - **NAT Traversal:** STUN support for connectivity behind firewalls.
     - **Secure P2P File Sharing (New v3.5):**
-        - **⚡ Turbo Logic:** Optimized async loop with 64KB chunking for high-speed transfers.
-        - **🔒 Integrity Verified:** Automatic **SHA-256 Hash Verification** for every file to prevent corruption or tampering.
-        - **🛡️ Secure Isolation:** Files are automatically sandboxed to `~/Downloads/AetherReceived`.
+        - ** Turbo Logic:** Optimized async loop with 64KB chunking for high-speed transfers.
+        - ** Integrity Verified:** Automatic **SHA-256 Hash Verification** for every file to prevent corruption or tampering.
+        - ** Secure Isolation:** Files are automatically sandboxed to `~/Downloads/AetherReceived`.
     - **Advanced Security:**
         - **UDP Replay Protection:** Timestamp & Nonce validation to prevent replay attacks on LAN discovery.
         - **HMAC Signatures:** All discovery beacons are cryptographically signed to prevent spoofing.
@@ -64,7 +64,7 @@ A decentralized, serverless communication module designed for secure, censorship
 
 ---
 
-## 🛠️ Installation
+##  Installation
 
 ### Requirements
 - Python 3.10+
@@ -108,7 +108,7 @@ Start_Win.bat
 ## ⚠️ Disclaimer
 This software is provided "AS IS", without warranty of any kind. While it implements state-of-the-art cryptographic primitives, the author is not responsible for data loss or damages. **Always backup critical data.**
 
-## 📜 License
+##  License
 This project was generated using Google Antigravity IDE (powered by Gemini 3).  
 © 2025 Google LLC. All rights to AI-generated content reserved by Google.  
 See https://antigravity.google/terms for details.  
